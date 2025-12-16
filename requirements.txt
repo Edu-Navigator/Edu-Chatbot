@@ -9,4 +9,3 @@ pytest
 boto3
 scikit-learn
 Pillow
-psycopg2
