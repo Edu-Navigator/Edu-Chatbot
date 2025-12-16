@@ -1,0 +1,113 @@
+# cicd.yml
+
+name: Airflow DAG CI/CD
+
+on:
+  push:
+    branches: [ main, 'feature/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dag-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Airflow DAG import test
+        run: |
+          docker compose -f docker-compose.ci.yml up \
+            --build \
+            --abort-on-container-exit
+
+  # main 브랜치에 push될 때만 배포
+  deploy-to-s3:
+    needs: dag-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+
+    - name: Sync to S3
+      run: |
+        # DAGs만 업로드
+        aws s3 sync ./airflow/dags/ s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
+          --exclude ".git/*" \
+          --exclude ".github/*" \
+          --exclude "*.md" \
+          --exclude "docker-compose*.yml" \
+          --exclude "Dockerfile" \
+          --delete
+        echo "✅ S3 업로드 완료"  
+    
+  deploy-to-main:
+    needs: deploy-to-s3
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+    
+    - name: Deploy to Airflow Main
+      run: |
+        COMMAND_ID=$(aws ssm send-command \
+          --instance-ids "${{ vars.EC2_INSTANCE_ID_AIRFLOW_MAIN}}" \
+          --document-name "AWS-RunShellScript" \
+          --parameters 'commands=[
+            "aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ /home/ec2-user/airflow/dags/ --delete",,
+            "sudo systemctl restart airflow-webserver",
+            "sudo systemctl restart airflow-scheduler",
+            "echo \"✅ Airflow Main 배포 완료\""
+          ]' \
+          --output text \
+          --query 'Command.CommandId')
+        
+        echo "Command ID: $COMMAND_ID"
+        echo "✅ Airflow Main 배포 명령 전송 완료"
+
+  deploy-to-worker:
+    needs: deploy-to-main
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+    
+    - name: Deploy to Airflow Worker
+      run: |
+        COMMAND_ID=$(aws ssm send-command \
+          --instance-ids "${{ vars.EC2_INSTANCE_ID_AIRFLOW_WORKER }}" \
+          --document-name "AWS-RunShellScript" \
+          --parameters 'commands=[
+            "aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/deployment/ /home/ec2-user/airflow/dags/ --delete",
+            "sudo systemctl restart airflow-worker",
+            "echo \"✅ Airflow Worker 배포 완료\""
+          ]' \
+          --output text \
+          --query 'Command.CommandId')
+        
+        echo "Command ID: $COMMAND_ID"
+        echo "✅ Airflow Worker 배포 명령 전송 완료"
+
+
+
+        
