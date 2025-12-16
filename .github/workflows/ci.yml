@@ -1,0 +1,23 @@
+# ci.yml
+
+name: Airflow DAG CI
+
+on:
+  push:
+    branches: [ main, 'feature/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dag-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Airflow DAG import test
+        run: |
+          docker compose -f docker-compose.ci.yml up \
+            --build \
+            --abort-on-container-exit
