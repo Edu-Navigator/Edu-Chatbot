@@ -1,5 +1,5 @@
 from airflow.decorators import task
-from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 import pandas as pd
 import requests
 import math
@@ -91,47 +91,12 @@ def gg_task():
     df['LCTR_PRICE'] = pd.to_numeric(df['LCTR_PRICE'], errors='coerce').astype('Int64')
 
     # 5) Snowflake에 데이터 적재
-    hook = SnowflakeHook(snowflake_conn_id="snowflake_conn")
+    hook = PostgresHook(postgres_conn_id="conn_production")
     conn = hook.get_conn()
     cursor = conn.cursor()
 
-    # DATABASE_NAME = "DIGIEDU"
-    # SCHEMA_NAME = "RAW_DATA"
-
-    # cursor.execute(f"USE DATABASE {DATABASE_NAME}") 
-    # cursor.execute(f"USE SCHEMA {SCHEMA_NAME}")
     SCHEMA_NAME = "RAW_DATA"
     table_name = "GG_LEARNING"
-
-    # cursor.execute(f"""
-    #     CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.{table_name} (
-    #         LCTR_NM STRING,
-    #         LCTR_BGN STRING,
-    #         LCTR_END STRING,
-    #         LCTR_BGN_TIME STRING,
-    #         LCTR_END_TIME STRING,
-    #         LCTR_CONTENT STRING,
-    #         LCTR_TARGET STRING,
-    #         LCTR_WAY STRING,
-    #         LCTR_DAY STRING,
-    #         LCTR_LOCATE STRING,
-    #         LCTR_PCSP INTEGER,
-    #         LCTR_PRICE INTEGER,
-    #         LCTR_ADDRESS STRING,
-    #         LCTR_OPERATE STRING,
-    #         OPERATE_TELEPHONE STRING,
-    #         APLY_BGN STRING,
-    #         APLY_END STRING,
-    #         APLY_WAY STRING,
-    #         SELECT_WAY STRING,
-    #         APLY_URL STRING,
-    #         NOTUSE1 STRING,
-    #         NOTUSE2 STRING,
-    #         NOTUSE3 STRING,
-    #         NOTUSE4 STRING
-    #     )
-    # """)
-    # cursor.execute(f"TRUNCATE TABLE {SCHEMA_NAME}.{table_name}")
     
     # 테이블 full refresh
     cursor.execute(

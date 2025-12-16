@@ -1,5 +1,5 @@
 from airflow.decorators import task
-from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -112,36 +112,12 @@ def suji_task():
     df = df.reindex(columns=ordered_cols)
 
     # 5) Snowflake에 데이터 적재
-    hook = SnowflakeHook(snowflake_conn_id="snowflake_conn")
+    hook = PostgresHook(postgres_conn_id="conn_production")
     conn = hook.get_conn()
     cursor = conn.cursor()
 
-    # DATABASE_NAME = "DIGIEDU"
-    # SCHEMA_NAME = "RAW_DATA"
-
-    # cursor.execute(f"USE DATABASE {DATABASE_NAME}") 
-    # cursor.execute(f"USE SCHEMA {SCHEMA_NAME}")
     SCHEMA_NAME = "RAW_DATA"
     table_name = "SUJI_LEARNING"
-
-    # 테이블 생성/초기화
-    # cursor.execute(f"""
-    #     CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.{table_name} (
-    #         APLY_URL STRING,
-    #         LCTR_NM STRING,
-    #         LCTR_TEACHER STRING,
-    #         REGISTER_PSCP STRING,
-    #         LCTR_BGN_END STRING,
-    #         LCTR_TIME STRING,
-    #         APLY_BGN_END STRING,
-    #         APLY_STATUS STRING,
-    #         APLY_LOCATE_LIMIT STRING,
-    #         LCTR_TARGET STRING,
-    #         LCTR_LOCATE STRING,
-    #         DETAIL STRING
-    #     )
-    # """)
-    # cursor.execute(f"TRUNCATE TABLE {SCHEMA_NAME}.{table_name}")
     
     # 테이블 full refresh
     cursor.execute(

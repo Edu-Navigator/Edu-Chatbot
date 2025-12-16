@@ -21,9 +21,9 @@ with DAG(
     
     upload_to_s3(
         res_scrape,
-        bucket='de7-data-bucket',
+        bucket='team7-batch',
         base_key="images/crawling/digital_learning",
         batch_size=12,
         delay=5,
-        conn_name='s3_conn'
+        conn_name='aws_default'
     )

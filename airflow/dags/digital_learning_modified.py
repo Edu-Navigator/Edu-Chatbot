@@ -15,10 +15,10 @@ with DAG(
     t1 = collect_list()
     t2 = collect_detail(t1)
     t3 = transform_data(t2)
-    t4 = load_data_to_snowflake(
+    t4 = load_data_to_table(
         t3, 
         schema = "RAW_DATA", 
         table  = "DIGITAL_LEARNING_END", 
-        conn_name = "snowflake_conn"
+        conn_name = "conn_production"
     )
 
