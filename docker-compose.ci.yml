@@ -1,0 +1,19 @@
+services:
+  airflow-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: airflow-ci-test
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./tests:/opt/airflow/tests
+      - ./data:/opt/airflow/data
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+    command: >
+      bash -c "
+        airflow db init &&
+        pytest /opt/airflow/tests -v &&
+        echo 'All tests passed!'
+      "
