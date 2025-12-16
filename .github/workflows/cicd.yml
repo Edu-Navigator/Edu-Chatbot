@@ -69,7 +69,7 @@ jobs:
           --instance-ids "${{ vars.EC2_INSTANCE_ID_AIRFLOW_MAIN}}" \
           --document-name "AWS-RunShellScript" \
           --parameters 'commands=[
-            "aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ /home/ec2-user/airflow/dags/ --delete",,
+            "aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ /home/ubuntu/airflow/dags/ --delete",
             "sudo systemctl restart airflow-webserver",
             "sudo systemctl restart airflow-scheduler",
             "echo \"✅ Airflow Main 배포 완료\""
