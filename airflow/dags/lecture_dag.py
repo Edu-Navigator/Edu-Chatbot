@@ -11,7 +11,7 @@ from scripts.lecture_task import (
 
 
 with DAG(
-    dag_id="lecture_dag",
+    dag_id="01_lecture_dag",
     start_date=datetime(2025, 12, 9), 
     schedule_interval=None,
     catchup=False,
