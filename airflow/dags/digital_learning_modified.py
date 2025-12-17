@@ -4,12 +4,20 @@ from datetime import datetime
 
 from scripts.digilearn_task import *
 
+default_args = {
+    'owner': 'airflow',
+    'email': ['sosoj1552@gmail.com'], # 알림 받을 이메일 주소
+    'email_on_failure': True,
+    'email_on_success': True,
+}
+
 with DAG(
-    dag_id="digital_learning_crawl_v20251215",
+    dag_id="01_digital_learning_crawl_v20251215",
     start_date=datetime(2025, 12, 10),
     schedule = None, # 스케줄 없음
     catchup=False,
-    tags=["crawl"],
+    tags=['01', 'raw_data', "digital_learn"],
+    default_args=default_args
 ) as dag:
 
     t1 = collect_list()

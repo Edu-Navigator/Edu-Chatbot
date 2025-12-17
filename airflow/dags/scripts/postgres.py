@@ -1,6 +1,7 @@
 from airflow.decorators import task
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 import pandas as pd
+from airflow.exceptions import AirflowSkipException
 
 
 import logging
@@ -14,7 +15,7 @@ def table_full_refresh(data:dict, schema, table, conn_name="conn_production", **
     # 빈 DataFrame 체크
     if df.empty:
         logging.warning(f"[경고] 빈 DataFrame - {schema}.{table} 적재 스킵")
-        return
+        raise AirflowSkipException(" 데이터 없음: 적재 생략")
 
     hook = PostgresHook(postgres_conn_id=conn_name)
     conn, cursor = None, None

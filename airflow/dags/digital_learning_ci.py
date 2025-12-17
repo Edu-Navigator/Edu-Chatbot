@@ -58,7 +58,7 @@ with DAG(
     start_date=days_ago(1),
     schedule_interval=None,   
     catchup=False,
-    tags=["ci", "crawl"],
+    tags=["test", "ci"],
 ) as dag:
 
 
