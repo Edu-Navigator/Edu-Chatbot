@@ -367,7 +367,13 @@ def suji_data_processing_task():
     hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
     sql_query = f"SELECT * FROM {TABLE_RAW_SUJI}"
     df_raw_suji = hook.get_pandas_df(sql_query)
+
+    logger.info(f"DB에서 가져온 실제 컬럼명: {df_raw_suji.columns.tolist()}")
+
     df_raw_suji.columns = [c.upper() for c in df_raw_suji.columns]
+
+    logger.info(f"변환된 컬럼명: {df_raw_suji.columns.tolist()}")
+    
     logger.info(f"원본 데이터 (SUJI_LEARNING) {len(df_raw_suji)}건 로드 완료")
     
     if df_raw_suji.empty:
