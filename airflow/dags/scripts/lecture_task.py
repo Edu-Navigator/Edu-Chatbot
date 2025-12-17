@@ -24,8 +24,8 @@ JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 # 원본 데이터 테이블
 TABLE_RAW_SUJI = "RAW_DATA.SUJI_LEARNING" 
 TABLE_RAW_GG = "RAW_DATA.GG_LEARNING"
-TABLE_RAW_DIGI = "RAW_DATA.DIGITAL_LEARNING_RAW" 
-TABLE_RAW_DIGI_END = "RAW_DATA.DIGITAL_LEARNING_END_RAW"
+TABLE_RAW_DIGI = "RAW_DATA.DIGITAL_LEARNING" 
+TABLE_RAW_DIGI_END = "RAW_DATA.DIGITAL_LEARNING_END"
 
 
 # -----------------------------------------------------------
@@ -367,6 +367,7 @@ def suji_data_processing_task():
     hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
     sql_query = f"SELECT * FROM {TABLE_RAW_SUJI}"
     df_raw_suji = hook.get_pandas_df(sql_query)
+    df_raw_suji.columns = [c.upper() for c in df_raw_suji.columns]
     logger.info(f"원본 데이터 (SUJI_LEARNING) {len(df_raw_suji)}건 로드 완료")
     
     if df_raw_suji.empty:
@@ -390,6 +391,7 @@ def gg_data_processing_task():
     hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
     sql_query = f"SELECT * FROM {TABLE_RAW_GG}"
     df_raw_gg = hook.get_pandas_df(sql_query)
+    df_raw_gg.columns = [c.upper() for c in df_raw_gg.columns]
     logger.info(f"원본 데이터 (GG_LEARNING) {len(df_raw_gg)}건 로드 완료")
     
     if df_raw_gg.empty:
@@ -413,6 +415,7 @@ def digi_data_processing_task():
     hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
     sql_query = f"SELECT * FROM {TABLE_RAW_DIGI}"
     df_raw_digi = hook.get_pandas_df(sql_query)
+    df_raw_digi.columns = [c.upper() for c in df_raw_digi.columns]
     logger.info(f"원본 데이터 (DIGITAL_LEARNING) {len(df_raw_digi)}건 로드 완료")
     
     if df_raw_digi.empty:
@@ -436,6 +439,7 @@ def digi_end_data_processing_task():
     hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
     sql_query = f"SELECT * FROM {TABLE_RAW_DIGI_END}"
     df_raw_digi_end = hook.get_pandas_df(sql_query)
+    df_raw_digi_end.columns = [c.upper() for c in df_raw_digi_end.columns]
     logger.info(f"원본 데이터 (DGITAL_LEARNING_END) {len(df_raw_digi_end)}건 로드 완료")
     
     if df_raw_digi_end.empty:
@@ -552,6 +556,7 @@ def lecture_location_image_task():
         FROM {SCHEMA_PROCESSED}.{TABLE_LECTURE}
     """
     df = hook.get_pandas_df(sql)
+    df.columns = [c.upper() for c in df.columns]
 
     # 주소 기반 지역/좌표 계산
     def resolve_row(row):
