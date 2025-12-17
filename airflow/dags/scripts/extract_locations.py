@@ -73,6 +73,7 @@ def et_urdn_location(csv_key,bucket,conn_name='s3_conn', **context):
 def get_details_location(schema, table, conn_name="conn_production", **context):
     hook = PostgresHook(postgres_conn_id=conn_name)
     df = hook.get_pandas_df(f"SELECT * FROM {schema}.{table};")
+    df.columns = [c.upper() for c in df.columns]
     
     for idx, row in df.iterrows():
         addr = row["ADDRESS_TXT"]
