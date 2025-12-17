@@ -1,26 +1,25 @@
 from airflow.decorators import task
-from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 import pandas as pd
-import numpy as np
+import logging
 from datetime import date
 from utils.lecture_common_func import *
-from utils.kakaomap_api import *
 
 
 # -----------------------------------------------------------
 # 상수 및 설정
 # -----------------------------------------------------------
 
-# Snowflake 연결
-SNOWFLAKE_CONN_ID = 'snowflake_conn'
-DB_NM = "DIGIEDU"
+logger = logging.getLogger("airflow.task")
+
+# PostgreSQL 연결
+POSTGRES_CONN_ID = "conn_production"
 SCHEMA_PROCESSED = "PROCESSED"
 TABLE_LECTURE = "LECTURE"
 JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 # JUSO_API_KEY = Variable.get("juso_api_key")
 # KAKAO_API_KEY = Variable.get("kakao_api_key")
-
 
 # 원본 데이터 테이블
 TABLE_RAW_SUJI = "RAW_DATA.SUJI_LEARNING" 
@@ -28,33 +27,6 @@ TABLE_RAW_GG = "RAW_DATA.GG_LEARNING"
 TABLE_RAW_DIGI = "RAW_DATA.DIGITAL_LEARNING_RAW" 
 TABLE_RAW_DIGI_END = "RAW_DATA.DIGITAL_LEARNING_END_RAW"
 
-# LECTURE 테이블 생성 SQL
-CREATE_LECTURE_TABLE_SQL = f"""
-CREATE TABLE IF NOT EXISTS {DB_NM}.{SCHEMA_PROCESSED}.{TABLE_LECTURE} (
-    LCTR_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    APLY_URL TEXT,
-    LCTR_WAY TEXT,
-    LCTR_CATEGORY TEXT,
-    LCTR_NM TEXT,
-    APLY_WAY TEXT,
-    APLY_BGN TIMESTAMP,
-    APLY_END TIMESTAMP,
-    LCTR_BGN TIMESTAMP,
-    LCTR_END TIMESTAMP,
-    LCTR_CONTENT TEXT,
-    PCSP INTEGER,
-    IS_APLY_AVL BOOLEAN,
-
-    DL_NM TEXT,
-    ADDRESS TEXT,
-    LC_1 TEXT,
-    LC_2 TEXT,
-    LC_3 TEXT,
-    ADDRESS_X TEXT,
-    ADDRESS_Y TEXT,
-    LCTR_IMAGE TEXT
-);
-"""
 
 # -----------------------------------------------------------
 # 개별 데이터 처리 함수 (테이블별 데이터 파싱)
@@ -287,6 +259,9 @@ def process_digi(df_raw: pd.DataFrame) -> pd.DataFrame:
     """
     if df_raw.empty:
         return pd.DataFrame()
+    
+    return pd.DataFrame()
+
 
 def process_digi_end(df_raw: pd.DataFrame) -> pd.DataFrame:
     """
@@ -383,132 +358,132 @@ def process_digi_end(df_raw: pd.DataFrame) -> pd.DataFrame:
 # Airflow Task 정의
 # -----------------------------------------------------------
 
-@task
-def create_lecture_table_task():
-    """ 
-    Task 1: LECTURE 테이블을 정의하고 생성. 
-    """
-    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-    conn = hook.get_conn()
-    cursor = conn.cursor()
-    
-    try:
-        # DB/Schema 선택
-        cursor.execute(f"USE DATABASE {DB_NM}")
-        cursor.execute(f"USE SCHEMA {SCHEMA_PROCESSED}")
-        
-        # 테이블 생성 SQL 실행
-        cursor.execute(CREATE_LECTURE_TABLE_SQL)
-        
-        conn.commit()
-        print(f"LECTURE 테이블 생성 완료")
-        
-    except Exception as e:
-        conn.rollback()
-        print(f"LECTURE 테이블 생성 실패: {e}")
-        raise
-    finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
-
 
 @task(do_xcom_push=True)
 def suji_data_processing_task():
     """ 
-    Task 2: SUJI_LEARNING 데이터를 처리하고 DataFrame을 XCom으로 반환.
+    RAW_DATA.SUJI_LEARNING 테이블을 PostgreSQL에서 조회한 후 process_suji 함수를 통해 전처리
     """
-    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-    sql_query = f"SELECT * FROM {DB_NM}.{TABLE_RAW_SUJI}"
+    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+    sql_query = f"SELECT * FROM {TABLE_RAW_SUJI}"
     df_raw_suji = hook.get_pandas_df(sql_query)
-    print(f"원본 데이터 (SUJI_LEARNING) {len(df_raw_suji)}건 로드 완료")
+    logger.info(f"원본 데이터 (SUJI_LEARNING) {len(df_raw_suji)}건 로드 완료")
     
     if df_raw_suji.empty:
-        print("SUJI_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
+        logger.info("SUJI_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
         return pd.DataFrame() 
 
     df_suji = process_suji(df_raw_suji)
-    print(f"데이터 처리 완료 (SUJI_LEARNING) {len(df_suji)}건")
-    return df_suji
+
+    path = f"{Variable.get('DATA_DIR')}/suji.csv"
+    df_suji.to_csv(path, index=False, encoding="utf-8-sig")
+
+    logger.info(f"SUJI 처리 결과 CSV 저장 완료: {path}")
+    return path
 
 
 @task(do_xcom_push=True)
 def gg_data_processing_task():
     """ 
-    Task 3: GG_LEARNING 데이터를 처리하고 DataFrame을 XCom으로 반환.
+    RAW_DATA.GG_LEARNING 테이블을 PostgreSQL에서 조회한 후 process_gg 함수를 통해 전처리
     """
-    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-    sql_query = f"SELECT * FROM {DB_NM}.{TABLE_RAW_GG}"
+    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+    sql_query = f"SELECT * FROM {TABLE_RAW_GG}"
     df_raw_gg = hook.get_pandas_df(sql_query)
-    print(f"원본 데이터 (GG_LEARNING) {len(df_raw_gg)}건 로드 완료")
+    logger.info(f"원본 데이터 (GG_LEARNING) {len(df_raw_gg)}건 로드 완료")
     
     if df_raw_gg.empty:
-        print("GG_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
+        logger.info("GG_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
         return pd.DataFrame() 
 
     df_gg = process_gg(df_raw_gg)
-    print(f"데이터 처리 완료 (GG_LEARNING) {len(df_gg)}건")
-    return df_gg
+
+    path = f"{Variable.get('DATA_DIR')}/gg.csv"
+    df_gg.to_csv(path, index=False, encoding="utf-8-sig")
+
+    logger.info(f"GG 처리 결과 CSV 저장 완료: {path}")
+    return path
 
 
 @task(do_xcom_push=True)
 def digi_data_processing_task():
     """ 
-    Task 4: 디지털 배움터(신청 가능) 데이터를 처리하고 DataFrame을 XCom으로 반환.
+    RAW_DATA.DIGITAL_LEARNING 테이블을 PostgreSQL에서 조회한 후 process_digi 함수를 통해 전처리
     """
-    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-    sql_query = f"SELECT * FROM {DB_NM}.{TABLE_RAW_DIGI}"
+    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+    sql_query = f"SELECT * FROM {TABLE_RAW_DIGI}"
     df_raw_digi = hook.get_pandas_df(sql_query)
-    print(f"원본 데이터 (DIGITAL_LEARNING) {len(df_raw_digi)}건 로드 완료")
+    logger.info(f"원본 데이터 (DIGITAL_LEARNING) {len(df_raw_digi)}건 로드 완료")
     
     if df_raw_digi.empty:
-        print("DIGITAL_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
+        logger.info("DIGITAL_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
         return pd.DataFrame()
 
     df_digi = process_digi(df_raw_digi)
-    print(f"데이터 처리 완료 (DIGITAL_LEARNING) {len(df_digi)}건")
-    return df_digi
+
+    path = f"{Variable.get('DATA_DIR')}/digi.csv"
+    df_digi.to_csv(path, index=False, encoding="utf-8-sig")
+
+    logger.info(f"DIGITAL_LEARNING 처리 결과 CSV 저장 완료: {path}")
+    return path
 
 
 @task(do_xcom_push=True)
 def digi_end_data_processing_task():
     """ 
-    Task 5: 디지털 배움터(수강 종료) 데이터를 처리하고 DataFrame을 XCom으로 반환.
+    RAW_DATA.DIGITAL_LEARNING_END_RAW 테이블을 PostgreSQL에서 조회한 후 process_digi_end 함수를 통해 전처리
     """
-    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
-    sql_query = f"SELECT * FROM {DB_NM}.{TABLE_RAW_DIGI_END}"
+    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+    sql_query = f"SELECT * FROM {TABLE_RAW_DIGI_END}"
     df_raw_digi_end = hook.get_pandas_df(sql_query)
-    print(f"원본 데이터 (DGITAL_LEARNING_END) {len(df_raw_digi_end)}건 로드 완료")
+    logger.info(f"원본 데이터 (DGITAL_LEARNING_END) {len(df_raw_digi_end)}건 로드 완료")
     
     if df_raw_digi_end.empty:
-        print("DGITAL_LEARNING_END 테이블에 데이터가 없어 빈 DataFrame을 반환합니다.")
+        logger.info("DGITAL_LEARNING_END 테이블에 데이터가 없어 빈 DataFrame을 반환")
         return pd.DataFrame()
 
     df_digi_end = process_digi_end(df_raw_digi_end)
-    print(f"데이터 처리 완료 (DGITAL_LEARNING_END) {len(df_digi_end)}건")
-    return df_digi_end
+
+    path = f"{Variable.get('DATA_DIR')}/digi_end.csv"
+    df_digi_end.to_csv(path, index=False, encoding="utf-8-sig")
+
+    logger.info(f"DIGITAL_LEARNING_END 처리 결과 CSV 저장 완료: {path}")
+    return path
 
 
 @task
-def combine_and_insert_lecture_task(df_suji: pd.DataFrame, df_gg: pd.DataFrame, df_digi: pd.DataFrame, df_digi_end: pd.DataFrame):
+def combine_and_insert_lecture_task(
+    suji_path: str,
+    gg_path: str,
+    digi_path: str,
+    digi_end_path: str
+):
     """
-    Task 6: 4개의 DataFrame을 통합하여 LECTURE 테이블에 INSERT.
+    SUJI / GG / DIGITAL / DIGITAL_END 전처리 결과 DataFrame을 통합, csv 생성 후
+    PROCESSED.LECTURE 테이블에 적재하는 Task
     """
-    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
+    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
     conn = hook.get_conn()
     cursor = conn.cursor()
 
-    # ------------------------------------------------------------------
-    # 1. 데이터 통합 및 준비
-    # ------------------------------------------------------------------
+    # csv 로드 및 데이터 통합
     
-    all_dataframes = [df_suji, df_gg, df_digi, df_digi_end]
-    valid_dataframes = [df for df in all_dataframes if not df.empty]
-    
-    if not valid_dataframes:
-        print("LECTURE 테이블에 삽입할 데이터가 없음")
+    paths = [suji_path, gg_path, digi_path, digi_end_path]
+    dfs = []
+
+    for path in paths:
+        if not path:
+            continue
+
+        df = pd.read_csv(path)
+        if not df.empty:
+            dfs.append(df)
+
+    if not dfs:
+        logger.info("적재할 데이터가 없어 LECTURE 테이블 적재 스킵")
         return
 
-    df_final = pd.concat(valid_dataframes, ignore_index=True)
+    df_final = pd.concat(dfs, ignore_index=True)
     
     # LECTURE 테이블의 컬럼 순서 (LCTR_ID 제외, AUTOINCREMENT 컬럼)
     ordered_cols = [
@@ -518,60 +493,54 @@ def combine_and_insert_lecture_task(df_suji: pd.DataFrame, df_gg: pd.DataFrame, 
         'ADDRESS_X', 'ADDRESS_Y', 'LCTR_IMAGE'
     ]
 
-    # snowflake에 맞게 날짜 변환, 이후 삭제 또는 변경 필요한지 테스트 필요
-    date_cols = ['APLY_BGN', 'APLY_END', 'LCTR_BGN', 'LCTR_END']
-    for col in date_cols:
-        # datetime 객체를 'YYYY-MM-DD' 형식의 문자열로 변환
-        df_final[col] = df_final[col].dt.strftime('%Y-%m-%d')
+    # # snowflake에 맞게 날짜 변환, 이후 삭제 또는 변경 필요한지 테스트 필요
+    # date_cols = ['APLY_BGN', 'APLY_END', 'LCTR_BGN', 'LCTR_END']
+    # for col in date_cols:
+    #     # datetime 객체를 'YYYY-MM-DD' 형식의 문자열로 변환
+    #     df_final[col] = df_final[col].dt.strftime('%Y-%m-%d')
 
     df_final = df_final[ordered_cols]
-    nrows = len(df_final)
-    print(f"총 {nrows}건의 데이터 통합 완료")
 
-    # ------------------------------------------------------------------
-    # 2. Snowflake SQL 작업: TRUNCATE & INSERT
-    # ------------------------------------------------------------------
-    
-    table_full_name = f"{DB_NM}.{SCHEMA_PROCESSED}.{TABLE_LECTURE}"
-    
+    # csv 생성
+    path = f"{Variable.get('DATA_DIR')}/lecture.csv"
+    df_final.to_csv(path, index=False, encoding="utf-8-sig")
+    logger.info(f"lecture.csv 생성 완료: {path}")
+
+    # PROCESSED.LECTURE 테이블에 적재
     try:
-        # DB/Schema 선택
-        cursor.execute(f"USE DATABASE {DB_NM}")
-        cursor.execute(f"USE SCHEMA {SCHEMA_PROCESSED}")
+        cursor.execute(f"TRUNCATE TABLE {SCHEMA_PROCESSED}.{TABLE_LECTURE}")
 
-        # A. 기존 데이터 TRUNCATE
-        truncate_sql = f"TRUNCATE TABLE {table_full_name}"
-        cursor.execute(truncate_sql)
-
-        # B. 데이터프레임을 튜플 리스트로 변환 (None/NaN 처리 포함)
-        data_to_insert = [
-            tuple(row[col] if pd.notnull(row[col]) else None for col in ordered_cols)
-            for _, row in df_final.iterrows()
-        ]
-        
-        # C. INSERT 실행
-        if data_to_insert:
-            placeholders = ','.join(['%s'] * len(ordered_cols))
-            insert_query = f"INSERT INTO {table_full_name} ({', '.join(ordered_cols)}) VALUES ({placeholders})"
-            
-            cursor.executemany(insert_query, data_to_insert)
-            print(f"통합 데이터 ({nrows}건) -> LECTURE 테이블 최종 INSERT")
-        else:
-            print("삽입할 데이터가 없어 INSERT 작업 수행X")
+        with open(path, "r", encoding="utf-8") as f:
+            cursor.copy_expert(
+                f"""
+                COPY {SCHEMA_PROCESSED}.{TABLE_LECTURE}
+                ({', '.join(ordered_cols)})
+                FROM STDIN
+                WITH CSV
+                """,
+                f
+            )
 
         conn.commit()
-        
-    except Exception as e:
+        logger.info("LECTURE 테이블 적재 완료(지역 정보, 좌표, 이미지 URL은 후처리)")
+
+    except Exception:
         conn.rollback()
-        print(f"데이터 적재 실패: {e}")
+        logger.exception("LECTURE 테이블 1차 적재 중 오류 발생, ROLLBACK 수행")
         raise
     finally:
-        if cursor: cursor.close()
-        if conn: conn.close()
+        cursor.close()
+        conn.close()
 
 @task
 def lecture_location_image_task():
-    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
+    """
+    PROCESSED.LECTURE 테이블을 조회하여
+    주소 기반 지역 정보(LC_1~LC_3), 좌표(ADDRESS_X/Y),
+    강의 카테고리 기반 이미지 URL을 계산한 뒤 해당 컬럼을 UPDATE 하는 후처리 Task.
+    """
+
+    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
 
     # lecture 테이블 로드
     sql = f"""
@@ -580,7 +549,7 @@ def lecture_location_image_task():
             ADDRESS,
             LCTR_CATEGORY,
             LCTR_IMAGE
-        FROM {DB_NM}.{SCHEMA_PROCESSED}.{TABLE_LECTURE}
+        FROM {SCHEMA_PROCESSED}.{TABLE_LECTURE}
     """
     df = hook.get_pandas_df(sql)
 
@@ -610,37 +579,36 @@ def lecture_location_image_task():
         + ".jpg"
     )
 
-    # Snowflake UPDATE
+    # PROCESSED.LECTURE 테이블에 적재
     conn = hook.get_conn()
     cursor = conn.cursor()
 
     update_sql = f"""
-        UPDATE {DB_NM}.{SCHEMA_PROCESSED}.{TABLE_LECTURE}
+        UPDATE {SCHEMA_PROCESSED}.{TABLE_LECTURE}
         SET
-            LC_1 = %s,
-            LC_2 = %s,
-            LC_3 = %s,
-            ADDRESS_X = %s,
-            ADDRESS_Y = %s,
-            LCTR_IMAGE = %s
-        WHERE LCTR_ID = %s
+            lc_1 = %s,
+            lc_2 = %s,
+            lc_3 = %s,
+            address_x = %s,
+            address_y = %s,
+            lctr_image = %s
+        WHERE lctr_id = %s
     """
 
-    update_data = [
-        (
-            row.LC_1,
-            row.LC_2,
-            row.LC_3,
-            row.ADDRESS_X,
-            row.ADDRESS_Y,
-            row.LCTR_IMAGE,
-            row.LCTR_ID,
-        )
-        for row in df.itertuples(index=False)
-    ]
+    cursor.executemany(
+        update_sql,
+        [
+            (
+                r.LC_1, r.LC_2, r.LC_3,
+                r.ADDRESS_X, r.ADDRESS_Y,
+                r.lctr_image, r.lctr_id
+            )
+            for r in df.itertuples()
+        ]
+    )
 
-    cursor.executemany(update_sql, update_data)
     conn.commit()
+    logger.info("LECTURE 테이블 지역 정보, 좌표, 이미지 URL UPDATE 완료")
 
     cursor.close()
     conn.close()

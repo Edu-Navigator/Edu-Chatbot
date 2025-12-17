@@ -1,7 +1,10 @@
 import pandas as pd
 import requests
-from utils.kakaomap_api import *
+import logging
+from utils.kakaomap_api import fetch_geocding
 # from airflow.models import Variable
+
+logger = logging.getLogger("airflow.task")
 
 def filter_data(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -168,7 +171,7 @@ def fetch_road_address(keyword: str, api_key: str, api_url: str) -> str:
         return juso_list[0].get("roadAddr")
 
     except Exception as e:
-        print(f"[주소 조회 실패] keyword={keyword}, error={e}")
+        logger.warning(f"[주소 조회 실패] keyword={keyword}, error={e}")
         return None
     
 

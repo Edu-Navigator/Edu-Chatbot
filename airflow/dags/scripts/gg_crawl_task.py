@@ -6,7 +6,7 @@ from airflow.models import Variable
 
 @task
 def gg_crawl_task():
-    API_KEY = "7796e90b54c64c1ab96597f09ac555e5"
+    API_KEY = Variable.get("gg_api_key")
     BASE_URL = "https://openapi.gg.go.kr/ALifetimeLearningLecture"
     PSIZE = 1000
 
