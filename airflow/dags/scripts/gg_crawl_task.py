@@ -94,3 +94,6 @@ def gg_crawl_task():
 
     # XCom 반환
     return df.to_dict(orient="records")
+
+
+# cd 테스트용 주석 추가
