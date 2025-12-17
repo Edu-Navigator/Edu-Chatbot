@@ -3,7 +3,7 @@ import pandas as pd
 import requests, time
 from airflow.decorators import task
 from airflow.models import Variable
-from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 from utils.kakaomap_api import fetch_geocding
 
@@ -70,8 +70,8 @@ def et_urdn_location(csv_key,bucket,conn_name='s3_conn', **context):
     return df.to_dict('records')
 
 @task
-def get_details_location(schema, table, conn_name='snowflake_conn', **context):
-    hook = SnowflakeHook(conn_name)
+def get_details_location(schema, table, conn_name="conn_production", **context):
+    hook = PostgresHook(postgres_conn_id=conn_name)
     df = hook.get_pandas_df(f"SELECT * FROM {schema}.{table};")
     
     for idx, row in df.iterrows():

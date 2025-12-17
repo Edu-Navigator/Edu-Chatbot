@@ -5,12 +5,6 @@ from scripts.gg_load_task import gg_load_task
 from scripts.suji_crawl_task import suji_crawl_task
 from scripts.suji_load_task import suji_load_task
 
-default_args = {
-    'owner': 'airflow',
-    'email': ['sosoj1552@gmail.com'], # 알림 받을 이메일 주소
-    'email_on_failure': True,
-    'email_on_success': True,
-}
 
 # DAG
 with DAG(
@@ -19,7 +13,6 @@ with DAG(
     schedule_interval=None,
     catchup=False,
     tags=['01', 'raw_data', "suji", "gyeonggi"],
-    default_args=default_args
 ):
 
     suji_crawl_path = suji_crawl_task()
