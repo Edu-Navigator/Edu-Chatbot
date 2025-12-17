@@ -18,8 +18,8 @@ DB_NM = "DIGIEDU"
 SCHEMA_PROCESSED = "PROCESSED"
 TABLE_LECTURE = "LECTURE"
 JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
-JUSO_API_KEY = Variable.get("juso_api_key")
-KAKAO_API_KEY = Variable.get("kakao_api_key")
+# JUSO_API_KEY = Variable.get("juso_api_key")
+# KAKAO_API_KEY = Variable.get("kakao_api_key")
 
 
 # 원본 데이터 테이블
@@ -246,6 +246,7 @@ def process_gg(df_raw: pd.DataFrame) -> pd.DataFrame:
     def resolve_gg_address(row) -> str | None:
         operate = str(row['LCTR_OPERATE']).strip()
         locate = str(row['LCTR_LOCATE']).strip()
+        JUSO_API_KEY = Variable.get("juso_api_key")
 
         # 1차 키워드 결정
         if operate == '디지털배움터':
@@ -585,6 +586,8 @@ def lecture_location_image_task():
 
     # 주소 기반 지역/좌표 계산
     def resolve_row(row):
+        KAKAO_API_KEY = Variable.get("kakao_api_key")
+        
         if pd.isna(row["ADDRESS"]) or row["ADDRESS"] is None:
             return pd.Series([None, None, None, None, None])
 

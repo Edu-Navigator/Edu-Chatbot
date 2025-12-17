@@ -1,7 +1,9 @@
 from airflow import DAG
 from datetime import datetime
-from scripts.gg_task import *
-from scripts.suji_task import *
+from scripts.gg_crawl_task import gg_crawl_task
+from scripts.gg_load_task import gg_load_task
+from scripts.suji_crawl_task import suji_crawl_task
+from scripts.suji_load_task import suji_load_task
 
 # DAG
 with DAG(
@@ -12,6 +14,9 @@ with DAG(
     tags=["suji", "gyeonggi"]
 ):
 
-    suji = suji_task()
-    gg = gg_task()
-    suji >> gg
+    suji_crawl = suji_crawl_task()
+    suji_load = suji_load_task(suji_crawl)
+    gg_crawl = gg_crawl_task()
+    gg_load = gg_load_task(gg_crawl)
+
+    suji_load >> gg_crawl
