@@ -5,13 +5,22 @@ from airflow.utils.task_group import TaskGroup
 from scripts.postgres import table_full_refresh
 from scripts.extract_locations import *
 
+default_args = {
+    'owner': 'airflow',
+    'email': ['sosoj1552@gmail.com'], # 알림 받을 이메일 주소
+    'email_on_failure': True,
+    'email_on_success': True,
+}
 
 with DAG(
-    dag_id = 'collect_location_info',
+    dag_id = '01_collect_location_info',
     start_date = datetime(2025, 12, 10),
     schedule = None, # 스케줄 없음
-    catchup = False
+    catchup = False,
+    tags=['01', 'raw_data', "location"],
+    default_args=default_args
 ) as dag :
+    
     # 디지털 배움터 교육장 API
     with TaskGroup(group_id="location_digilearning") as tg1:
         task1_1 = api_digi_learning_loc()
@@ -26,7 +35,7 @@ with DAG(
     with TaskGroup(group_id="extract_location_urdns") as tg2:
         task2_1 = et_urdn_location(
             csv_key = "rawdata/csv_manual/urdn_digi_edu.csv",
-            bucket  = 'de7-data-bucket',
+            bucket  = 'team7-batch',
             conn_name = 'aws_default'
         )
         task2_2 = table_full_refresh(

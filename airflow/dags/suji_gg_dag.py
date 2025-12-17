@@ -5,18 +5,34 @@ from scripts.gg_load_task import gg_load_task
 from scripts.suji_crawl_task import suji_crawl_task
 from scripts.suji_load_task import suji_load_task
 
+default_args = {
+    'owner': 'airflow',
+    'email': ['sosoj1552@gmail.com'], # 알림 받을 이메일 주소
+    'email_on_failure': True,
+    'email_on_success': True,
+}
+
 # DAG
 with DAG(
-    dag_id="suji_gg_pipeline",
+    dag_id="01_suji_gg_pipeline",
     start_date=datetime(2025, 12, 9),
     schedule_interval=None,
     catchup=False,
-    tags=["suji", "gyeonggi"]
+    tags=['01', 'raw_data', "suji", "gyeonggi"],
+    default_args=default_args
 ):
 
-    suji_crawl = suji_crawl_task()
-    suji_load = suji_load_task(suji_crawl)
-    gg_crawl = gg_crawl_task()
-    gg_load = gg_load_task(gg_crawl)
+    suji_crawl_path = suji_crawl_task()
+    suji_load = suji_load_task(
+        suji_crawl_path,
+        schema='RAW_DATA', 
+        table='SUJI_LEARNING')
+    
+    gg_api_path = gg_crawl_task()
+    gg_load = gg_load_task(
+        gg_api_path, 
+        schema="RAW_DATA", 
+        table="GG_LEARNING"
+    )
 
-    suji_load >> gg_crawl
+    suji_load >> gg_api_path

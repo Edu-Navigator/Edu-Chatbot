@@ -3,15 +3,20 @@ from airflow import DAG
 
 from scripts.craw_imgaes import *
 
-import logging
-logger = logging.getLogger("airflow.task")
-logger.setLevel(logging.INFO)
+default_args = {
+    'owner': 'airflow',
+    'email': ['sosoj1552@gmail.com'], # 알림 받을 이메일 주소
+    'email_on_failure': True,
+    'email_on_success': True,
+}
 
 with DAG(
-    dag_id = 'crawling_images_digilearning',
+    dag_id = '01_crawling_images_digilearning',
     start_date = datetime(2025, 12, 10),
     schedule = None, # 스케줄 없음
-    catchup = False
+    catchup = False,
+    tags=['01', 's3', "images"],
+    default_args=default_args
 ) as dag :
     
     res_scrape  = scape_images(

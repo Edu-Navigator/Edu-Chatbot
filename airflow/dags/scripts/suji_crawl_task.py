@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import pandas as pd
+from airflow.models import Variable
 
 @task
 def suji_crawl_task():
@@ -129,6 +130,9 @@ def suji_crawl_task():
 
     df = pd.DataFrame(records).rename(columns=mapping)
     df = df.reindex(columns=ordered_cols)
+    
+    path = f"{Variable.get('DATA_DIR')}/suji_crawl_res.csv"
+    df.to_csv(path, index=False)
 
     # XCom 반환
-    return df.to_dict(orient="records")
+    return path

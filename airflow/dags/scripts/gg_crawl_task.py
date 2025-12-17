@@ -2,6 +2,7 @@ from airflow.decorators import task
 import pandas as pd
 import requests
 import math
+from airflow.models import Variable
 
 @task
 def gg_crawl_task():
@@ -92,8 +93,8 @@ def gg_crawl_task():
     df["LCTR_PCSP"] = pd.to_numeric(df["LCTR_PCSP"], errors="coerce").astype("Int64")
     df["LCTR_PRICE"] = pd.to_numeric(df["LCTR_PRICE"], errors="coerce").astype("Int64")
 
+    path = f"{Variable.get('DATA_DIR')}/gg_api_res.csv"
+    df.to_csv(path, index=False)
+
     # XCom 반환
-    return df.to_dict(orient="records")
-
-
-# cd 테스트용 주석 추가
+    return path
