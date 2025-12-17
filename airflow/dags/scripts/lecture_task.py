@@ -24,7 +24,7 @@ JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 # 원본 데이터 테이블
 TABLE_RAW_SUJI = "RAW_DATA.SUJI_LEARNING" 
 TABLE_RAW_GG = "RAW_DATA.GG_LEARNING"
-TABLE_RAW_DIGI = "RAW_DATA.DIGITAL_LEARNING" 
+TABLE_RAW_DIGI = "RAW_DATA.DIGITAL_LEARNING_RAW" 
 TABLE_RAW_DIGI_END = "RAW_DATA.DIGITAL_LEARNING_END"
 
 
@@ -373,7 +373,7 @@ def suji_data_processing_task():
     df_raw_suji.columns = [c.upper() for c in df_raw_suji.columns]
 
     logger.info(f"변환된 컬럼명: {df_raw_suji.columns.tolist()}")
-    
+
     logger.info(f"원본 데이터 (SUJI_LEARNING) {len(df_raw_suji)}건 로드 완료")
     
     if df_raw_suji.empty:
