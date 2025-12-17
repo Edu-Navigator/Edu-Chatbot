@@ -5,12 +5,6 @@ from airflow.utils.task_group import TaskGroup
 from scripts.postgres import table_full_refresh
 from scripts.extract_locations import *
 
-default_args = {
-    'owner': 'airflow',
-    'email': ['sosoj1552@gmail.com'], # 알림 받을 이메일 주소
-    'email_on_failure': True,
-    'email_on_success': True,
-}
 
 with DAG(
     dag_id = '01_collect_location_info',
@@ -18,7 +12,6 @@ with DAG(
     schedule = None, # 스케줄 없음
     catchup = False,
     tags=['01', 'raw_data', "location"],
-    default_args=default_args
 ) as dag :
     
     # 디지털 배움터 교육장 API

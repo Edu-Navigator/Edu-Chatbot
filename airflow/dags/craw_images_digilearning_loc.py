@@ -3,12 +3,6 @@ from airflow import DAG
 
 from scripts.craw_imgaes import *
 
-default_args = {
-    'owner': 'airflow',
-    'email': ['sosoj1552@gmail.com'], # 알림 받을 이메일 주소
-    'email_on_failure': True,
-    'email_on_success': True,
-}
 
 with DAG(
     dag_id = '01_crawling_images_digilearning',
@@ -16,7 +10,6 @@ with DAG(
     schedule = None, # 스케줄 없음
     catchup = False,
     tags=['01', 's3', "images"],
-    default_args=default_args
 ) as dag :
     
     res_scrape  = scape_images(
