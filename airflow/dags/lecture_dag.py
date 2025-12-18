@@ -6,7 +6,8 @@ from scripts.lecture_task import (
     # digi_data_processing_task,
     digi_end_data_processing_task,
     combine_and_insert_lecture_task,
-    lecture_location_image_task
+    lecture_location_image_task,
+    edu_info_task
 )
 
 
@@ -25,7 +26,7 @@ with DAG(
     # digi_path = digi_data_processing_task()
     digi_end_path = digi_end_data_processing_task()
     
-    # Task 6: 통합 및 삽입
+    # Task 5: 통합 및 삽입
     final_combine = combine_and_insert_lecture_task(
         suji_path=suji_path,
         gg_path=gg_path,
@@ -33,10 +34,13 @@ with DAG(
         digi_end_path=digi_end_path,
     )
     
-    # Task 7: 강좌 위치 정보 업데이트
+    # Task 6: 강좌 위치 정보 업데이트
     location_image_update = lecture_location_image_task()
+
+    # Task 7: analytics.edu_info 업데이트
+    edu_info_update = edu_info_task()
 
     # 2. 의존성 정의
     [suji_path, gg_path, 
     # digi_path, 
-    digi_end_path] >> final_combine >> location_image_update
+    digi_end_path] >> final_combine >> location_image_update >> edu_info_update
