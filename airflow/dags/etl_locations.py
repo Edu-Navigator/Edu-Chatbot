@@ -1,6 +1,7 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.utils.task_group import TaskGroup
+from airflow.sensors.external_task import ExternalTaskSensor
 
 from scripts.postgres import table_full_refresh
 from scripts.extract_locations import *
@@ -9,10 +10,21 @@ from scripts.extract_locations import *
 with DAG(
     dag_id = '01_collect_location_info',
     start_date = datetime(2025, 12, 10),
-    schedule = None, # 스케줄 없음
+    schedule = "0 1 * * *", # utc 새벽 1시 = kst 오전 10시
     catchup = False,
     tags=['01', 'raw_data', "location"],
 ) as dag :
+    
+    wait_crawling_images = ExternalTaskSensor(
+        task_id="wait_01_crawling_images_digilearning",
+        external_dag_id="01_crawling_images_digilearning",
+        external_task_id=None,
+        allowed_states=["success"],
+        failed_states=["failed", "skipped"],
+        mode="reschedule",
+        poke_interval=60,
+        timeout=60 * 30,
+    )
     
     # 디지털 배움터 교육장 API
     with TaskGroup(group_id="location_digilearning") as tg1:
@@ -53,3 +65,5 @@ with DAG(
         )
     
     tg2 >> tg3
+
+    wait_crawling_images >> [tg1, tg2]
