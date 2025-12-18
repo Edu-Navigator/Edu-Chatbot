@@ -73,66 +73,95 @@ jobs:
           --exclude "*.md" \
           --exclude "docker-compose*.yml" \
           --exclude "Dockerfile" \
+          --exclude "*.pyc" \
+          --exclude "__pycache__/*" \
           --delete
-        echo "✅ S3 업로드 완료"  
+        echo "✅ S3 업로드 완료"
     
+  # Self-hosted runner로 Main 서버 배포
   deploy-to-main:
     needs: deploy-to-s3
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, airflow-main]
     
     steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ vars.AWS_REGION }}
-    
-    - name: Deploy to Airflow Main
+    - name: Sync DAGs from S3
       run: |
-        COMMAND_ID=$(aws ssm send-command \
-          --instance-ids "${{ vars.EC2_INSTANCE_ID_AIRFLOW_MAIN}}" \
-          --document-name "AWS-RunShellScript" \
-          --parameters 'commands=[
-            "aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ /home/ubuntu/airflow/dags/ --delete",
-            "sudo systemctl restart airflow-webserver",
-            "sudo systemctl restart airflow-scheduler",
-            "echo \"✅ Airflow Main 배포 완료\""
-          ]' \
-          --output text \
-          --query 'Command.CommandId')
+        echo "🚀 Airflow Main 배포 시작..."
         
-        echo "Command ID: $COMMAND_ID"
-        echo "✅ Airflow Main 배포 명령 전송 완료"
+        # S3에서 DAGs 동기화
+        aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
+          /home/ubuntu/airflow/dags/ \
+          --delete
+        
+        echo "✅ DAGs 동기화 완료"
+    
+    - name: Restart Airflow services
+      run: |
+        echo "🔄 Airflow 서비스 재시작..."
+        sudo systemctl restart airflow-webserver
+        sudo systemctl restart airflow-scheduler
+        
+        # 서비스 시작 대기
+        sleep 5
+        
+        # 서비스 상태 확인
+        if sudo systemctl is-active --quiet airflow-webserver && \
+           sudo systemctl is-active --quiet airflow-scheduler; then
+          echo "✅ Airflow Main 배포 완료"
+        else
+          echo "❌ Airflow 서비스 시작 실패"
+          sudo systemctl status airflow-webserver || true
+          sudo systemctl status airflow-scheduler || true
+          exit 1
+        fi
 
+  # Self-hosted runner로 Worker 서버 배포
   deploy-to-worker:
     needs: deploy-to-main
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, airflow-worker]
 
     steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ vars.AWS_REGION }}
-
-    - name: Deploy to Airflow Worker
+    - name: Sync DAGs from S3
       run: |
-        COMMAND_ID=$(aws ssm send-command \
-          --instance-ids "${{ vars.EC2_INSTANCE_ID_AIRFLOW_WORKER }}" \
-          --document-name "AWS-RunShellScript" \
-          --parameters 'commands=[
-            "aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ /home/ubuntu/airflow/dags/ --delete",
-            "sudo systemctl restart airflow-worker",
-            "echo \"✅ Airflow Worker 배포 완료\""
-          ]' \
-          --output text \
-          --query 'Command.CommandId')
-
-        echo "Command ID: $COMMAND_ID"
-        echo "✅ Airflow Worker 배포 명령 전송 완료"
-
-
-
+        echo "🚀 Airflow Worker 배포 시작..."
         
+        # S3에서 DAGs 동기화
+        aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
+          /home/ubuntu/airflow/dags/ \
+          --delete
+        
+        echo "✅ DAGs 동기화 완료"
+    
+    - name: Restart Airflow worker
+      run: |
+        echo "🔄 Airflow Worker 재시작..."
+        sudo systemctl restart airflow-worker
+        
+        # 서비스 시작 대기
+        sleep 5
+        
+        # 서비스 상태 확인
+        if sudo systemctl is-active --quiet airflow-worker; then
+          echo "✅ Airflow Worker 배포 완료"
+        else
+          echo "❌ Airflow Worker 시작 실패"
+          sudo systemctl status airflow-worker || true
+          exit 1
+        fi
+
+  # 배포 완료 알림
+  notify-deployment:
+    needs: [deploy-to-main, deploy-to-worker]
+    if: success()
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deployment Success
+      run: |
+        echo "🎉 배포 완료!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📦 S3 Bucket: ${{ vars.S3_BUCKET_NAME }}"
+        echo "🖥️  Airflow Main: team7-airflow-main"
+        echo "⚙️  Airflow Worker: team7-airflow-worker"
+        echo "🕐 Deployed at: $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
