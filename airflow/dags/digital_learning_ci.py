@@ -8,7 +8,6 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 import time
-import sys
 
 def collect_list(**context):
     from selenium import webdriver
