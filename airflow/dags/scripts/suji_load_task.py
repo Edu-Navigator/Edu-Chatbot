@@ -41,7 +41,7 @@ def suji_load_task(input_path, schema, table):
 
         if data:
             cursor.executemany(insert_sql, data)
-            logging.info(f"[삽입 - {schema}.{table}] {cursor.rowcount}개 행")
+            logging.info(f"[삽입] - {schema}.{table}] {cursor.rowcount}개 행")
         
         conn.commit()
         logging.info(f"[종료] {schema}.{table} : 완료")

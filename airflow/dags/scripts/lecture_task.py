@@ -473,8 +473,7 @@ def combine_and_insert_lecture_task(
     PROCESSED.LECTURE 테이블에 적재하는 Task
     """
     hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
-    conn = hook.get_conn()
-    cursor = conn.cursor()
+    conn, cursor = None, None
 
     # csv 로드 및 데이터 통합
     
@@ -520,29 +519,51 @@ def combine_and_insert_lecture_task(
 
     # PROCESSED.LECTURE 테이블에 적재
     try:
-        cursor.execute(f"TRUNCATE TABLE {SCHEMA_PROCESSED}.{TABLE_LECTURE}")
+        conn = hook.get_conn()
+        cursor = conn.cursor()
 
-        with open(path, "r", encoding="utf-8") as f:
-            cursor.copy_expert(
-                f"""
-                COPY {SCHEMA_PROCESSED}.{TABLE_LECTURE}
-                ({', '.join(ordered_cols)})
-                FROM STDIN
-                WITH CSV
-                """,
-                f
-            )
+        cursor.execute("BEGIN")
+
+        df_insert = pd.read_csv(path)
+        if df_insert.empty:
+            logger.info("lecture.csv 비어 있음: 적재 생략")
+            return
+
+        cursor.execute(f"DELETE FROM {SCHEMA_PROCESSED}.{TABLE_LECTURE}")
+        logger.info(f"[DELETE] {SCHEMA_PROCESSED}.{TABLE_LECTURE} 전체 삭제")
+
+        cols = df_insert.columns.tolist()
+        placeholders = ",".join(["%s"] * len(cols))
+
+        insert_sql = f"""
+            INSERT INTO {SCHEMA_PROCESSED}.{TABLE_LECTURE}
+            ({','.join(cols)})
+            VALUES ({placeholders})
+        """
+
+        data = [
+            tuple(row[col] if pd.notnull(row[col]) else None for col in cols)
+            for _, row in df_insert.iterrows()
+        ]
+
+        if data:
+            cursor.executemany(insert_sql, data)
+            logger.info(f"[삽입] - {SCHEMA_PROCESSED}.{TABLE_LECTURE}] {cursor.rowcount}개 행")
 
         conn.commit()
-        logger.info("LECTURE 테이블 적재 완료(지역 정보, 좌표, 이미지 URL은 후처리)")
+        logger.info(f"[종료] {SCHEMA_PROCESSED}.{TABLE_LECTURE} : 완료")
 
     except Exception:
-        conn.rollback()
-        logger.exception("LECTURE 테이블 1차 적재 중 오류 발생, ROLLBACK 수행")
+        if conn:
+            conn.rollback()
+        logger.exception("LECTURE 테이블 INSERT 중 오류 발생, ROLLBACK 수행")
         raise
+
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @task
 def lecture_location_image_task():
