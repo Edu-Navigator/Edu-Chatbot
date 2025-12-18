@@ -635,7 +635,7 @@ def lecture_location_image_task():
             (
                 r.LC_1, r.LC_2, r.LC_3,
                 r.ADDRESS_X, r.ADDRESS_Y,
-                r.lctr_image, r.lctr_id
+                r.LCTR_IMAGE, r.LCTR_ID
             )
             for r in df.itertuples()
         ]
