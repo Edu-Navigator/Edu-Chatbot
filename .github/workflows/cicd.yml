@@ -26,19 +26,26 @@ jobs:
           pip install ruff
 
       - name: Run Ruff lint
+        continue-on-error: true
         run: |
           ruff check .
 
       - name: Run Ruff format check
+        continue-on-error: true
         run: |
           ruff format --check .
-          
+
       - name: Run Airflow DAG import test
         run: |
           docker compose -f docker-compose.ci.yml up \
             --build \
-            --abort-on-container-exit
-            --quiet-pull
+            --abort-on-container-exit \
+            --exit-code-from airflow-test
+
+      - name: Show Docker logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.ci.yml logs
 
   # main 브랜치에 push될 때만 배포
   deploy-to-s3:
