@@ -4,8 +4,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
+# from datetime import datetime
+# from dateutil.relativedelta import relativedelta
 import pandas as pd
 import time
 

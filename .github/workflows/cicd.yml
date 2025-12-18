@@ -38,17 +38,12 @@ jobs:
           docker compose -f docker-compose.ci.yml up \
             --build \
             --abort-on-container-exit \
-            --quiet-pull \
-            > docker.log 2>&1
+            --exit-code-from airflow-test
 
-      - name: Show logs on failure
+      - name: Show Docker logs on failure
         if: failure()
         run: |
-          if [ -f docker.log ]; then
-            tail -n 200 docker.log
-          else
-            echo "docker.log not found"
-          fi
+          docker compose -f docker-compose.ci.yml logs --tail=200
 
 
   # main 브랜치에 push될 때만 배포
