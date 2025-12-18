@@ -44,7 +44,12 @@ jobs:
       - name: Show logs on failure
         if: failure()
         run: |
-          tail -n 200 docker.log
+          if [ -f docker.log ]; then
+            tail -n 200 docker.log
+          else
+            echo "docker.log not found"
+          fi
+
 
   # main 브랜치에 push될 때만 배포
   deploy-to-s3:

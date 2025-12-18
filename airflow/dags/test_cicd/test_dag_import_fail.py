@@ -3,7 +3,7 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 
 def broken_function():
-    raise Exception("DAG import test failure")  # ❌ import 시 에러
+    raise Exception("DAG import test failure")  # import 시 에러
 
 with DAG(
     dag_id="test_dag_import_fail",
