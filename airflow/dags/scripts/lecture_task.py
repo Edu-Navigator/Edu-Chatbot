@@ -24,7 +24,7 @@ JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 # 원본 데이터 테이블
 TABLE_RAW_SUJI = "RAW_DATA.SUJI_LEARNING" 
 TABLE_RAW_GG = "RAW_DATA.GG_LEARNING"
-TABLE_RAW_DIGI = "RAW_DATA.DIGITAL_LEARNING_RAW" 
+# TABLE_RAW_DIGI = "RAW_DATA.DIGITAL_LEARNING_RAW"
 TABLE_RAW_DIGI_END = "RAW_DATA.DIGITAL_LEARNING_END"
 
 
@@ -253,14 +253,14 @@ def process_gg(df_raw: pd.DataFrame) -> pd.DataFrame:
     return df_final[final_columns]
 
 
-def process_digi(df_raw: pd.DataFrame) -> pd.DataFrame:
-    """
-    디지털 배움터 (수강신청 가능) 데이터를 LECTURE 테이블 형식에 맞게 변환 및 파싱.
-    """
-    if df_raw.empty:
-        return pd.DataFrame()
+# def process_digi(df_raw: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     디지털 배움터 (수강신청 가능) 데이터를 LECTURE 테이블 형식에 맞게 변환 및 파싱.
+#     """
+#     if df_raw.empty:
+#         return pd.DataFrame()
     
-    return pd.DataFrame()
+#     return pd.DataFrame()
 
 
 def process_digi_end(df_raw: pd.DataFrame) -> pd.DataFrame:
@@ -413,28 +413,28 @@ def gg_data_processing_task():
     return path
 
 
-@task(do_xcom_push=True)
-def digi_data_processing_task():
-    """ 
-    RAW_DATA.DIGITAL_LEARNING 테이블을 PostgreSQL에서 조회한 후 process_digi 함수를 통해 전처리
-    """
-    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
-    sql_query = f"SELECT * FROM {TABLE_RAW_DIGI}"
-    df_raw_digi = hook.get_pandas_df(sql_query)
-    df_raw_digi.columns = [c.upper() for c in df_raw_digi.columns]
-    logger.info(f"원본 데이터 (DIGITAL_LEARNING) {len(df_raw_digi)}건 로드 완료")
+# @task(do_xcom_push=True)
+# def digi_data_processing_task():
+#     """ 
+#     RAW_DATA.DIGITAL_LEARNING 테이블을 PostgreSQL에서 조회한 후 process_digi 함수를 통해 전처리
+#     """
+#     hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+#     sql_query = f"SELECT * FROM {TABLE_RAW_DIGI}"
+#     df_raw_digi = hook.get_pandas_df(sql_query)
+#     df_raw_digi.columns = [c.upper() for c in df_raw_digi.columns]
+#     logger.info(f"원본 데이터 (DIGITAL_LEARNING) {len(df_raw_digi)}건 로드 완료")
     
-    if df_raw_digi.empty:
-        logger.info("DIGITAL_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
-        return pd.DataFrame()
+#     if df_raw_digi.empty:
+#         logger.info("DIGITAL_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
+#         return pd.DataFrame()
 
-    df_digi = process_digi(df_raw_digi)
+#     df_digi = process_digi(df_raw_digi)
 
-    path = f"{Variable.get('DATA_DIR')}/digi.csv"
-    df_digi.to_csv(path, index=False, encoding="utf-8-sig")
+#     path = f"{Variable.get('DATA_DIR')}/digi.csv"
+#     df_digi.to_csv(path, index=False, encoding="utf-8-sig")
 
-    logger.info(f"DIGITAL_LEARNING 처리 결과 CSV 저장 완료: {path}")
-    return path
+#     logger.info(f"DIGITAL_LEARNING 처리 결과 CSV 저장 완료: {path}")
+#     return path
 
 
 @task(do_xcom_push=True)
@@ -465,7 +465,7 @@ def digi_end_data_processing_task():
 def combine_and_insert_lecture_task(
     suji_path: str,
     gg_path: str,
-    digi_path: str,
+    # digi_path: str,
     digi_end_path: str
 ):
     """
@@ -478,7 +478,9 @@ def combine_and_insert_lecture_task(
 
     # csv 로드 및 데이터 통합
     
-    paths = [suji_path, gg_path, digi_path, digi_end_path]
+    paths = [suji_path, gg_path, 
+            # digi_path, 
+            digi_end_path]
     dfs = []
 
     for path in paths:

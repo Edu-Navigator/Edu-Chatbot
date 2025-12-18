@@ -3,7 +3,7 @@ from datetime import datetime
 from scripts.lecture_task import (
     suji_data_processing_task,
     gg_data_processing_task,
-    digi_data_processing_task,
+    # digi_data_processing_task,
     digi_end_data_processing_task,
     combine_and_insert_lecture_task,
     lecture_location_image_task
@@ -22,14 +22,14 @@ with DAG(
     
     suji_path = suji_data_processing_task()
     gg_path = gg_data_processing_task()
-    digi_path = digi_data_processing_task()
+    # digi_path = digi_data_processing_task()
     digi_end_path = digi_end_data_processing_task()
     
     # Task 6: 통합 및 삽입
     final_combine = combine_and_insert_lecture_task(
         suji_path=suji_path,
         gg_path=gg_path,
-        digi_path=digi_path,
+        # digi_path=digi_path,
         digi_end_path=digi_end_path,
     )
     
@@ -37,4 +37,6 @@ with DAG(
     location_image_update = lecture_location_image_task()
 
     # 2. 의존성 정의
-    [suji_path, gg_path, digi_path, digi_end_path] >> final_combine >> location_image_update
+    [suji_path, gg_path, 
+    # digi_path, 
+    digi_end_path] >> final_combine >> location_image_update
