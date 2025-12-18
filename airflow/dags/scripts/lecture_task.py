@@ -16,7 +16,9 @@ logger = logging.getLogger("airflow.task")
 # PostgreSQL 연결
 POSTGRES_CONN_ID = "conn_production"
 SCHEMA_PROCESSED = "PROCESSED"
+SCHEMA_ANALYTICS = "ANALYTICS"
 TABLE_LECTURE = "LECTURE"
+TABLE_EDU_INFO = "EDU_INFO"
 JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 # JUSO_API_KEY = Variable.get("juso_api_key")
 # KAKAO_API_KEY = Variable.get("kakao_api_key")
@@ -646,3 +648,33 @@ def lecture_location_image_task():
 
     cursor.close()
     conn.close()
+
+
+@task
+def edu_info_task():
+    """
+    PROCESSED.LECTURE 테이블에서
+    is_aply_avl = true 인 데이터만 필터링하여
+    ANALYTICS.EDU_INFO 테이블에 적재하는 Task
+    """
+
+    hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+
+    # 1. DELETE
+    delete_sql = f"""
+        DELETE FROM {SCHEMA_ANALYTICS}.{TABLE_EDU_INFO};
+    """
+    hook.run(delete_sql, autocommit=True)
+    logger.info(f"[삭제] {SCHEMA_ANALYTICS}.{TABLE_EDU_INFO} 데이터 삭제 완료")
+
+    # 2. INSERT
+    insert_sql = f"""
+        INSERT INTO {SCHEMA_ANALYTICS}.{TABLE_EDU_INFO}
+        SELECT *
+        FROM {SCHEMA_PROCESSED}.{TABLE_LECTURE}
+        WHERE is_aply_avl = true;
+    """
+    hook.run(insert_sql, autocommit=True)
+    logger.info(
+        f"[삽입] {SCHEMA_ANALYTICS}.{TABLE_EDU_INFO} 적재 완료 (is_aply_avl = true)"
+    )
