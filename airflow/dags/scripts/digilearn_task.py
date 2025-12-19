@@ -1,3 +1,10 @@
+"""
+Digital Learning 크롤링 및 적재 파이프라인 (Airflow TaskFlow).
+
+이 모듈은 디지털배움터 강의 목록 수집 -> 상세 정보 수집 ->
+데이터 정제 -> PostgreSQL 적재까지의 ETL 파이프라인을 정의한다.
+"""
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -40,13 +47,45 @@ DIGI_END_COLNAME_MAP = {
 
 @task
 def collect_list(**context):
+    """
+    디지털 학습 강의 목록을 수집한다.
+
+    Selenium을 이용하여 지역 및 상태별 강의 목록을 순회하며
+    강의명, 상태, 상세 페이지 URL을 수집한다.
+
+    Parameters
+    ----------
+    **context : dict
+        Airflow task context 객체.
+
+    Returns
+    -------
+    str
+        강의 목록 CSV 파일 경로
+    """
 
     def make_detail_url(edc_oprtn_id):
+        """
+        강의 상세 페이지 URL을 생성한다.
+
+        Parameters
+        ----------
+        edc_oprtn_id : str
+            강의 운영 ID
+
+        Returns
+        -------
+        str
+            강의 상세 페이지 URL
+        """
+        
+        # 목록 페이지는 JS 렌더링(Selenium 사용)
         return (
             "https://www.xn--2z1bw8k1pjz5ccumkb.kr/edc/crse/oprtn/dtl.do"
             f"?edc_oprtn_id={edc_oprtn_id}&edu_type=E&active_tab=a_end"
         )
 
+    # 지역 코드
     AREAS = {"서울": "101", "경기도": "203"}
 
     today = datetime.today()
@@ -83,7 +122,7 @@ def collect_list(**context):
                     time.sleep(1)
 
                     items = driver.find_elements(By.CSS_SELECTOR, "div.edulistel")
-                    if not items:
+                    if not items: # 마지막 페이지로 간주
                         break
 
                     for item in items:
@@ -119,6 +158,26 @@ def collect_list(**context):
 
 @task
 def collect_detail(input_path, **context):
+    """
+    강의 상세 페이지 정보를 수집한다.
+
+    강의 목록 CSV를 입력받아 각 강의의 상세 페이지를 요청하고,
+    테이블 형태의 상세 정보를 파싱하여 CSV로 저장한다.
+
+    Parameters
+    ----------
+    input_path : str
+        강의 목록 CSV 파일 경로
+    **context : dict
+        Airflow task context 객체.
+
+    Returns
+    -------
+    str
+        강의 상세 정보 CSV 파일 경로
+    """
+    
+    # 상세 페이지는 정적 HTML; requests + BeautifulSoup 사용
     df_list = pd.read_csv(input_path)
 
     logging.info(f"[@@] Start - get details of digital learning. shape of data = {df_list.shape}")
@@ -147,6 +206,25 @@ def collect_detail(input_path, **context):
 
 @task
 def transform_data(input_path,**context):
+    """
+    수집된 데이터를 정제 및 변환한다.
+
+    강의 상태를 분류하고 컬럼명을 표준 스키마에 맞게 변경한 뒤
+    최종 CSV 파일을 생성한다.
+
+    Parameters
+    ----------
+    input_path : str
+        상세 정보 CSV 파일 경로
+    **context : dict
+        Airflow task context 객체.
+
+    Returns
+    -------
+    str
+        변환 완료된 CSV 파일 경로
+    """
+    
     df = pd.read_csv(input_path)
 
     def classify(status):
@@ -166,6 +244,30 @@ def transform_data(input_path,**context):
     
 @task
 def load_data_to_table(input_path, schema, table, conn_name="conn_production", **context):
+    """
+    CSV 데이터를 PostgreSQL 테이블에 적재한다.
+
+    Full refresh 방식으로 기존 데이터를 삭제한 후
+    CSV 데이터를 일괄 삽입한다.
+
+    Parameters
+    ----------
+    input_path : str
+        적재할 CSV 파일 경로
+    schema : str
+        대상 스키마명
+    table : str
+        대상 테이블명
+    conn_name : str, default="conn_production"
+        Airflow Postgres connection ID
+    **context : dict
+        Airflow task context 객체.
+
+    Returns
+    -------
+    None
+    """
+        
     df = pd.read_csv(input_path)
     df = df.where(pd.notnull(df), None)
 

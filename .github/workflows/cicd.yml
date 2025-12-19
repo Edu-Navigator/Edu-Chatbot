@@ -173,3 +173,5 @@ jobs:
         echo "⚙️  Airflow Worker: team7-airflow-worker"
         echo "🕐 Deployed at: $(date '+%Y-%m-%d %H:%M:%S')"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# git commit
