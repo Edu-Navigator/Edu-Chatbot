@@ -12,7 +12,7 @@ with DAG(
 ) as dag:
 
     train_prophet_models(
-        schema = 'analytics',
+        schema = 'processed',
         table  = 'lecture',
         bucket = 'team7-bucket',
         s3_base_prefix = "models/prophet",
