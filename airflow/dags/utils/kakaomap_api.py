@@ -3,15 +3,35 @@ import requests
 
 
 def fetch_geocding(addr, api_key, max_retry=3):
-    '''
-    Docstring for fetch_geocding
-    
-    주소 -> 좌표 변환 API 호출
-    
-    :param addr: 주소 
-    :param api_key: 카카오 REST API 키
-    :param max_retry: (default = 3) API 재시도 호출 횟수
-    '''
+    """
+    카카오 주소 검색 API를 호출하여 주소에 해당하는 좌표 정보를 조회한다.
+
+    입력된 주소 문자열을 기준으로 카카오 로컬 API를 호출하여
+    좌표 변환 결과를 반환한다. 네트워크 오류 또는 비정상 응답 발생 시
+    지정된 횟수만큼 재시도를 수행한다.
+
+    Parameters
+    ----------
+    addr : str
+        좌표 조회에 사용할 주소 문자열.
+    api_key : str
+        카카오 REST API 인증 키.
+    max_retry : int, optional
+        API 호출 재시도 횟수 (기본값: 3).
+
+    Returns
+    -------
+    dict or None
+        API 응답 데이터(JSON 파싱 결과).
+        검색 결과가 없거나 재시도 이후에도 실패한 경우 None을 반환한다.
+
+    Raises
+    ------
+    requests.exceptions.RequestException
+        HTTP 요청 과정에서 네트워크 오류가 발생할 수 있다.
+    ValueError
+        API 응답을 JSON으로 파싱하는 과정에서 오류가 발생할 수 있다.
+    """
     # 호출시 필요한 변수 및 쿼리
     url     = "https://dapi.kakao.com/v2/local/search/address.json"
     headers = {"Authorization": f"KakaoAK {api_key}"}
