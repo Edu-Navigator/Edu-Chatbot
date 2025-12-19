@@ -82,16 +82,20 @@ with DAG(
     # 3. 의존성 정의
     # -------------------------------
     # 1~4번 DAG가 모두 끝난 뒤 lecture 시작
-    [
-        wait_crawling_images,
-        wait_etl_locations,
-        wait_digital_learning,
-        wait_suji_gg_pipeline
-    ] >> [suji_path, gg_path, 
-        # digi_path,
-        digi_end_path]
+
+
+    for t in [suji_path, gg_path, digi_end_path]:  # 이후 digi_path 추가
+        [
+            wait_crawling_images,
+            wait_etl_locations,
+            wait_digital_learning,
+            wait_suji_gg_pipeline,
+        ] >> t
 
     # lecture DAG 내부 의존성
-    [suji_path, gg_path, 
-    # digi_path,
-    digi_end_path] >> final_combine >> location_image_update >> edu_info_update
+    [
+        suji_path,
+        gg_path,
+        # digi_path,
+        digi_end_path,
+    ] >> final_combine >> location_image_update >> edu_info_update
