@@ -10,7 +10,7 @@ from scripts.extract_locations import *
 with DAG(
     dag_id = '01_collect_location_info',
     start_date = datetime(2025, 12, 10),
-    schedule = "0 2 * * *", # utc 새벽 1시 = kst 오전 10시
+    schedule = "10 2 * * *", # utc 새벽 1시 = kst 오전 10시
     catchup = False,
     tags=['01', 'raw_data', "location"],
 ) as dag :

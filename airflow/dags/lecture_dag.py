@@ -16,7 +16,7 @@ from scripts.lecture_task import (
 with DAG(
     dag_id="01_lecture_dag",
     start_date=datetime(2025, 12, 9), 
-    schedule="0 2 * * *", # utc 새벽 1시 = kst 오전 10시
+    schedule="10 2 * * *", # utc 새벽 1시 = kst 오전 10시
     catchup=False,
     tags=["01", "postgres", "lecture", 'edu_info'],
 ) as dag:

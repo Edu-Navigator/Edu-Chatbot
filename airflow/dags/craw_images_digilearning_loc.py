@@ -7,7 +7,7 @@ from scripts.craw_imgaes import *
 with DAG(
     dag_id = '01_crawling_images_digilearning',
     start_date = datetime(2025, 12, 10),
-    schedule = "0 2 * * *", # utc 새벽 1시 = kst 오전 10시
+    schedule = "10 2 * * *", # utc 새벽 1시 = kst 오전 10시
     catchup = False,
     tags=['01', 's3', "images"],
 ) as dag :
