@@ -9,6 +9,42 @@ logger.setLevel(logging.INFO)
 
 @task
 def gg_load_task(input_path, schema, table):
+    """
+    경기도 평생학습 OpenAPI 수집 결과 CSV 파일을 PostgreSQL 테이블에 적재한다.
+
+    입력된 CSV 파일을 읽어 전체 데이터를 PostgreSQL 테이블에 적재하며,
+    적재 전 기존 데이터는 모두 삭제한다.
+    데이터가 없는 경우에는 task를 Skip 처리한다.
+
+    Parameters
+    ----------
+    input_path : str
+        OpenAPI 수집 결과 CSV 파일 경로이다.
+    schema : str
+        적재 대상 PostgreSQL 스키마 이름이다.
+    table : str
+        적재 대상 PostgreSQL 테이블 이름이다.
+
+    Returns
+    -------
+    str
+        적재 완료 메시지 문자열이다.
+        삽입된 데이터 건수를 포함한다.
+
+    Notes
+    -----
+    - 데이터 출처
+        - 경기도 평생학습 OpenAPI 수집 결과 CSV
+    - 적재 방식
+        - CSV 파일 로드 후 전체 DELETE → INSERT 방식이다.
+        - 트랜잭션 단위로 처리되며 실패 시 ROLLBACK을 수행한다.
+    - 데이터가 없는 경우
+        - CSV 파일 내 데이터가 0건인 경우이다.
+        - AirflowSkipException을 발생시켜 task를 Skip 처리한다.
+    - 적재 대상 테이블
+        - (schema.table) 형태로 동적 지정한다.
+    """
+
     df = pd.read_csv(input_path)
     if len(df) == 0:
         raise AirflowSkipException("수지구청 데이터 없음: 적재 생략")

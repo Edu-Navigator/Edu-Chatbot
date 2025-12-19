@@ -8,10 +8,29 @@ logger = logging.getLogger("airflow.task")
 
 def filter_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    LCTR_NM에 '&amp;' 포함 시 ' ' (공백)으로 변환
-    LCTR_NM에 '스마트폰' OR '키오스크' OR '컴퓨터' 포함된 데이터만 대상 (포함 조건)
-    LCTR_NM에 '자격증' OR '컴퓨터활용능력' OR 'ITQ' 포함된 데이터는 제외 (제외 조건)
+    강좌명(LCTR_NM)을 기준으로 스마트폰, 키오스크, 컴퓨터 관련 강좌만 필터링한다.
+
+    강좌명에 포함 조건 키워드가 존재하고, 제외 조건 키워드가 존재하지 않는
+    데이터만 선별하여 반환한다.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        강좌 정보가 포함된 원본 데이터프레임.
+        LCTR_NM 컬럼을 반드시 포함해야 한다.
+
+    Returns
+    -------
+    pandas.DataFrame
+        필터링 조건을 만족하는 행만 포함한 데이터프레임.
+        조건을 만족하는 데이터가 없거나 LCTR_NM 컬럼이 없으면 빈 DataFrame을 반환한다.
+
+    Raises
+    ------
+    TypeError
+        입력 객체가 pandas.DataFrame 타입이 아닌 경우 발생할 수 있다.
     """
+
     if 'LCTR_NM' not in df.columns:
         return pd.DataFrame() # LCTR_NM이 없으면 빈 데이터프레임 반환
 
@@ -40,8 +59,32 @@ def filter_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def map_and_explode_categories(df: pd.DataFrame) -> pd.DataFrame:
     """
-    디지털 배움터 (종료) 강좌 테이블의 DL_NM 컬럼을 LECTURE 테이블의 ADDRESS, DL_NM으로 분리 파싱.
+    강좌명(LCTR_NM)을 기준으로 디지털 교육 카테고리를 매핑하고 다중 카테고리를 행 단위로 분리한다.
+
+    강좌명에 포함된 키워드를 기반으로 카테고리를 생성한 뒤,
+    하나의 강좌가 여러 카테고리에 해당하는 경우 행을 복제(explode)하여
+    LCTR_CATEGORY 컬럼만 다른 동일한 행으로 확장한다.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        LCTR_NM 컬럼을 포함해야 한다.
+
+    Returns
+    -------
+    pandas.DataFrame
+        LCTR_CATEGORY 컬럼이 추가된 데이터프레임.
+        다중 카테고리에 해당하는 경우 행이 분리되어 반환된다.
+        입력 데이터프레임이 비어 있으면 원본을 그대로 반환한다.
+
+    Raises
+    ------
+    KeyError
+        입력 데이터프레임에 LCTR_NM 컬럼이 존재하지 않는 경우 발생할 수 있다.
+    TypeError
+        입력 객체가 pandas.DataFrame 타입이 아닌 경우 발생할 수 있다.
     """
+
     if df.empty:
         return df
         
@@ -87,8 +130,30 @@ def map_and_explode_categories(df: pd.DataFrame) -> pd.DataFrame:
 
 def parse_dl_nm_and_address(raw_str: str):
     """
-    디지털 배움터 (종료) 강좌 테이블의 DL_NM 컬럼을 LECTURE 테이블의 ADDRESS, DL_NM으로 분리 파싱.
+    디지털 배움터(종료) 강좌 문자열에서 주소 정보와 강좌명을 분리 파싱한다.
+
+    DL_NM 컬럼에 포함된 문자열을 분석하여 주소 영역과 강좌명을 분리한다.
+    괄호 패턴 또는 공백 구분 규칙을 기준으로 파싱하며,
+    파싱이 불가능한 경우 일부 값은 None으로 반환한다.
+
+    Parameters
+    ----------
+    raw_str : str
+        디지털 배움터 강좌 문자열.
+        주소 정보와 강좌명이 혼합된 원본 문자열이다.
+
+    Returns
+    -------
+    tuple[str | None, str | None]
+        (address, dl_nm) 형태의 튜플.
+        주소 또는 강좌명 파싱이 불가능한 경우 해당 값은 None으로 반환된다.
+
+    Raises
+    ------
+    TypeError
+        입력 값이 문자열로 변환 불가능한 타입인 경우 발생할 수 있다.
     """
+
     if not raw_str or pd.isna(raw_str):
         return None, None
 
@@ -131,7 +196,33 @@ def parse_dl_nm_and_address(raw_str: str):
 
 def fetch_road_address(keyword: str, api_key: str, api_url: str) -> str:
     """
-    경기도 평생학습 테이블에서 사용, 주소 검색 API를 호출하여 도로명 주소를 반환.
+    주소 검색 API를 호출하여 키워드에 해당하는 도로명 주소를 조회한다.
+
+    경기도 평생학습 데이터 처리 과정에서 사용되며,
+    입력된 키워드를 기준으로 도로명주소 검색 API를 호출한 뒤
+    조회 결과 중 첫 번째 도로명 주소를 반환한다.
+
+    Parameters
+    ----------
+    keyword : str
+        주소 검색에 사용할 키워드 문자열.
+    api_key : str
+        주소 검색 API 인증 키.
+    api_url : str
+        주소 검색 API 엔드포인트 URL.
+
+    Returns
+    -------
+    str or None
+        조회된 도로명 주소.
+        검색 결과가 없거나 오류가 발생한 경우 None을 반환한다.
+
+    Raises
+    ------
+    requests.exceptions.RequestException
+        HTTP 요청 과정에서 네트워크 오류가 발생할 수 있다.
+    ValueError
+        API 응답이 JSON 형식이 아니거나 파싱에 실패한 경우 발생할 수 있다.
     """
 
     # 주소 찾기 api
@@ -173,12 +264,38 @@ def fetch_road_address(keyword: str, api_key: str, api_url: str) -> str:
     except Exception as e:
         logger.warning(f"[주소 조회 실패] keyword={keyword}, error={e}")
         return None
-    
+
 
 def resolve_lc_and_coord(address: str, api_key: str):
     """
-    카카오 API 호출, ADDRESS 값으로 시도/시군구/읍면동 및 좌표(x,y) 반환.
+    주소 문자열을 기준으로 행정구역 정보와 좌표 정보를 조회한다.
+
+    카카오 주소 검색 API를 호출하여 입력된 주소에 해당하는
+    시도, 구, 동 정보와 좌표(x, y)를 반환한다.
+    API response 중 address 정보가 없는 경우에는 road_address 정보를 대체로 사용한다.
+
+    Parameters
+    ----------
+    address : str
+        행정구역 및 좌표 조회에 사용할 주소 문자열.
+    api_key : str
+        카카오 주소 검색 API 인증 키.
+
+    Returns
+    -------
+    tuple[str | None, str | None, str | None, str | None, str | None]
+        (lc1, lc2, lc3, x, y) 형태의 튜플.
+        각 값은 순서대로 시도, 구, 동, x좌표, y좌표이며,
+        조회 실패 시 모든 값은 None으로 반환된다.
+
+    Raises
+    ------
+    KeyError
+        API 응답 데이터 구조가 예상과 다른 경우 발생할 수 있다.
+    TypeError
+        API 응답이 딕셔너리 형태가 아닌 경우 발생할 수 있다.
     """
+
     data = fetch_geocding(address, api_key, max_retry=3)
     
     if not data or not data.get("documents"):

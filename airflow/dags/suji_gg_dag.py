@@ -12,7 +12,7 @@ from scripts.suji_load_task import suji_load_task
 with DAG(
     dag_id="01_suji_gg_pipeline",
     start_date=datetime(2025, 12, 9),
-    schedule_interval="0 2 * * *", # utc 새벽 1시 = kst 오전 10시
+    schedule_interval="0 1 * * *", # utc 새벽 1시 = kst 오전 10시
     catchup=False,
     tags=['01', "suji", "gyeonggi"],
 ) as dag:
