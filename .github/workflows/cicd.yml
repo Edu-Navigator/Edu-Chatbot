@@ -83,12 +83,19 @@ jobs:
     runs-on: [self-hosted, airflow-main]
     
     steps:
+    - name: Clean pycache
+      run: |
+        sudo find /home/ubuntu/airflow/dags -type d -name "__pycache__" -exec rm -rf {} +
+
     - name: Sync DAGs from S3
       run: |
         echo "🚀 Airflow Main 배포 시작..."
         aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
           /home/ubuntu/airflow/dags/ \
-          --delete
+          --delete \
+          --exclude "__pycache__/*" \
+          --exclude "**/__pycache__/*" \
+          --exclude "*.pyc"
         echo "✅ DAGs 동기화 완료"
 
     - name: Restart Airflow (manual)
@@ -114,6 +121,11 @@ jobs:
     runs-on: [self-hosted, airflow-worker]
 
     steps:
+    
+    - name: Clean pycache
+      run: |
+        sudo find /home/ubuntu/airflow/dags -type d -name "__pycache__" -exec rm -rf {} +
+
     - name: Sync DAGs from S3
       run: |
         echo "🚀 Airflow Worker 배포 시작..."
@@ -121,8 +133,11 @@ jobs:
         # S3에서 DAGs 동기화
         aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
           /home/ubuntu/airflow/dags/ \
-          --delete
-        
+        --delete \
+        --exclude "__pycache__/*" \
+        --exclude "**/__pycache__/*" \
+        --exclude "*.pyc"
+      
         echo "✅ DAGs 동기화 완료"
     
     - name: Restart Airflow (manual)
