@@ -78,42 +78,42 @@ jobs:
           --delete
         echo "✅ S3 업로드 완료"
     
-  # Self-hosted runner로 Main 서버 배포
   deploy-to-main:
     needs: deploy-to-s3
     runs-on: [self-hosted, airflow-main]
     
     steps:
+    - name: Clean pycache
+      run: |
+        sudo find /home/ubuntu/airflow/dags -type d -name "__pycache__" -exec rm -rf {} +
+
     - name: Sync DAGs from S3
       run: |
         echo "🚀 Airflow Main 배포 시작..."
-        
-        # S3에서 DAGs 동기화
         aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
           /home/ubuntu/airflow/dags/ \
-          --delete
-        
+          --delete \
+          --exclude "__pycache__/*" \
+          --exclude "**/__pycache__/*" \
+          --exclude "*.pyc"
         echo "✅ DAGs 동기화 완료"
-    
-    - name: Restart Airflow services
+
+    - name: Restart Airflow (manual)
       run: |
-        echo "🔄 Airflow 서비스 재시작..."
-        sudo systemctl restart airflow-webserver
-        sudo systemctl restart airflow-scheduler
-        
-        # 서비스 시작 대기
-        sleep 5
-        
-        # 서비스 상태 확인
-        if sudo systemctl is-active --quiet airflow-webserver && \
-           sudo systemctl is-active --quiet airflow-scheduler; then
-          echo "✅ Airflow Main 배포 완료"
-        else
-          echo "❌ Airflow 서비스 시작 실패"
-          sudo systemctl status airflow-webserver || true
-          sudo systemctl status airflow-scheduler || true
-          exit 1
-        fi
+        echo "🔄 Airflow processes 재시작중..."
+
+        pkill -f "airflow webserver" || true
+        pkill -f "airflow scheduler" || true
+        pkill -f "airflow triggerer" || true
+
+        sleep 3
+
+        nohup /home/airflow/.local/bin/airflow scheduler > ~/airflow-scheduler.log 2>&1 &
+        nohup /home/airflow/.local/bin/airflow webserver > ~/airflow-webserver.log 2>&1 &
+        nohup /home/airflow/.local/bin/airflow triggerer > ~/airflow-triggerer.log 2>&1 &
+
+        echo "✅ Airflow Main 배포 완료"
+
 
   # Self-hosted runner로 Worker 서버 배포
   deploy-to-worker:
@@ -121,6 +121,11 @@ jobs:
     runs-on: [self-hosted, airflow-worker]
 
     steps:
+    
+    - name: Clean pycache
+      run: |
+        sudo find /home/ubuntu/airflow/dags -type d -name "__pycache__" -exec rm -rf {} +
+
     - name: Sync DAGs from S3
       run: |
         echo "🚀 Airflow Worker 배포 시작..."
@@ -128,26 +133,29 @@ jobs:
         # S3에서 DAGs 동기화
         aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
           /home/ubuntu/airflow/dags/ \
-          --delete
-        
+        --delete \
+        --exclude "__pycache__/*" \
+        --exclude "**/__pycache__/*" \
+        --exclude "*.pyc"
+      
         echo "✅ DAGs 동기화 완료"
     
-    - name: Restart Airflow worker
+    - name: Restart Airflow (manual)
       run: |
-        echo "🔄 Airflow Worker 재시작..."
-        sudo systemctl restart airflow-worker
-        
-        # 서비스 시작 대기
-        sleep 5
-        
-        # 서비스 상태 확인
-        if sudo systemctl is-active --quiet airflow-worker; then
-          echo "✅ Airflow Worker 배포 완료"
-        else
-          echo "❌ Airflow Worker 시작 실패"
-          sudo systemctl status airflow-worker || true
-          exit 1
-        fi
+        echo "🔄 Airflow processes 재시작중..."
+
+        pkill -f "airflow webserver" || true
+        pkill -f "airflow scheduler" || true
+        pkill -f "airflow triggerer" || true
+
+        sleep 3
+
+        nohup /home/airflow/.local/bin/airflow scheduler > ~/airflow-scheduler.log 2>&1 &
+        nohup /home/airflow/.local/bin/airflow webserver > ~/airflow-webserver.log 2>&1 &
+        nohup /home/airflow/.local/bin/airflow triggerer > ~/airflow-triggerer.log 2>&1 &
+
+        echo "✅ Airflow 배포 완료"
+
 
   # 배포 완료 알림
   notify-deployment:
