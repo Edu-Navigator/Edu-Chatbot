@@ -218,14 +218,15 @@ def predict_prophet(
     })
 
     for key in model_keys:
-        logging.info(f"[@@] Start forecasting... {group_id} ")
         group_id = key.split("/")[-1].replace(".pkl", "")
         group_values = get_group_values(group_id)
+        
+        logging.info(f"[@@] Start forecasting... {group_id} ")
+        logging.info(f"{group_values}")
         
         # 1) 모델 다운로드
         with tempfile.NamedTemporaryFile() as tmp:
             s3client.download_file(bucket, key, tmp.name)
-            print(tmp.name)
             model = joblib.load(tmp.name)
 
         # 2) 예측 수행 & 예측값 전처리
@@ -237,7 +238,7 @@ def predict_prophet(
         
         if len(forecast.query("yhat > 0")) != 0 :
             # 예측 결과가 0보다 큰 경우만 적재
-            print(forecast.query("yhat > 0")[['ds', 'yhat']].assign(**group_values))
+            logging.info(forecast.query("yhat > 0")[['ds', 'yhat']].assign(**group_values))
             
             predictions.append(
                 forecast.query("yhat > 0")[['ds', 'yhat']]\
