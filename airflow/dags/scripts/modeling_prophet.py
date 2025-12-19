@@ -260,6 +260,6 @@ def predict_prophet(
     logging.info(f"=================================")
     
     path = f"{Variable.get('DATA_DIR')}/pred_prophet.csv"
-    res.to_csv(path, index=False)
+    all_preds.to_csv(path, index=False)
     logging.info(f"[@@] Saved CSV File in local : {path}")
     return path
