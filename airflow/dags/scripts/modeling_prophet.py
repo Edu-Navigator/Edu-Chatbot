@@ -252,14 +252,14 @@ def predict_prophet(
     all_preds['pred_aply_bgn'] = all_preds["ds"] - pd.Timedelta(days=20)
     all_preds = (
         all_preds[all_preds['pred_aply_bgn'] > today]
-        .drop(columns=['ds'])
+        .drop(columns=['ds', 'yhat'])
     )
     
     logging.info(f"Preditions : ")
-    print(all_preds.head())
+    print("\n",all_preds.head())
     logging.info(f"=================================")
     
-    logging.info(f"[@@] Saved CSV File in local : {path}")
     path = f"{Variable.get('DATA_DIR')}/pred_prophet.csv"
     res.to_csv(path, index=False)
+    logging.info(f"[@@] Saved CSV File in local : {path}")
     return path
