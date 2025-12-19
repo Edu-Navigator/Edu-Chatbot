@@ -93,7 +93,13 @@ def get_details_location(schema, table, conn_name="conn_production", **context):
         
     df = df.rename(columns=GEO_COLNAME_MAP)
     
-    df = df[~df['ADDRESS'].isnull()].reset_index(drop=True)
+    df = df[
+        ~df['ADDRESS'].isnull() & 
+        (df['ADDRESS'] != 'nan') & 
+        (df['ADDRESS'].str.lower() != 'nan') &
+        (df['ADDRESS'] != 'null')
+        ]\
+        .reset_index(drop=True)
     df['DL_NM'] = df['URDN_CATEGORY']+" "+df['URDN_NM']
 
     res = df[['DL_NM', 'TEL_NO', 'LC_1', 'LC_2', 'LC_3', 'ADDRESS','ADDRESS_X', 'ADDRESS_Y']]\

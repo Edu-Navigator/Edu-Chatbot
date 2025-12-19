@@ -8,6 +8,7 @@ import joblib
 import tempfile
 import json, re
 import pandas as pd
+import numpy as np
 from datetime import datetime
 
 import logging
@@ -123,11 +124,12 @@ def train_prophet_models(schema, table, bucket, s3_base_prefix, s3_conn="s3_conn
     
     # metadata저장 : 이번에 훈련된 group 정보
     metadata = {
-        "trained_at": datetime.utcnow().isoformat(),
+        "trained_at": datetime.now(),
         "model_date": today,
         "groups": trained_groups,
         "algorithm": "prophet"
     }
+    
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as tmp:
         json.dump(metadata, tmp)
         tmp.flush()
@@ -143,3 +145,119 @@ def train_prophet_models(schema, table, bucket, s3_base_prefix, s3_conn="s3_conn
             f"{s3_base_prefix}/latest/metadata.json"
         )    
     logging.info(f"End Training Prophet : {len(trained_groups)} is trained")
+
+# ======================================
+def check_latest_model_exists(bucket, prefix, conn_name, **context) :
+    """
+    S3 latest 경로에 pkl 모델이 하나라도 있는지 확인
+    """
+    s3hook   = S3Hook(aws_conn_id=conn_name)
+    s3client = s3hook.get_conn() # boto3 client
+
+    response = s3client.list_objects_v2(
+        Bucket=bucket,
+        Prefix=prefix,
+    )
+
+    if "Contents" not in response:
+        logging.info("No objects found in latest model path.")
+        return False
+
+    model_files = [
+        obj["Key"]
+        for obj in response["Contents"]
+        if obj["Key"].endswith(".pkl")
+    ]
+
+    if not model_files:
+        logging.info("No model (.pkl) files found in latest.")
+        return False
+
+    logging.info(f"Found {len(model_files)} model files.")
+    return True
+
+def get_group_values(grp_name):
+    grp_ele = grp_name.split('__')[1:]
+    # _ -> whitespace 로 변환
+    return {
+        'lc_1' : re.sub(r"_", " ", grp_ele[0]), 
+        'lc_2' : re.sub(r"_", " ", grp_ele[1]),
+        'lctr_category' : re.sub(r"_", " ", grp_ele[2]),
+    }
+
+@task
+def predict_prophet(
+    bucket,
+    prefix = "models/prophet/latest/",
+    conn_name = "aws_default",
+    **context
+):
+    s3hook   = S3Hook(aws_conn_id=conn_name)
+    s3client = s3hook.get_conn() # boto3 client
+
+    response = s3client.list_objects_v2(
+        Bucket=bucket,
+        Prefix=prefix,
+    )
+
+    model_keys = [
+        obj["Key"]
+        for obj in response.get("Contents", [])
+        if obj["Key"].endswith(".pkl")
+    ]
+
+    if not model_keys:
+        raise ValueError("No model files found, but prediction task was triggered.")
+
+    predictions = []
+    
+    today = context['ds']
+    future = pd.DataFrame({
+        "ds": pd.date_range(start=today, periods=29, freq="D")
+    })
+
+    for key in model_keys:
+        logging.info(f"[@@] Start forecasting... {group_id} ")
+        group_id = key.split("/")[-1].replace(".pkl", "")
+        group_values = get_group_values(group_id)
+        
+        # 1) 모델 다운로드
+        with tempfile.NamedTemporaryFile() as tmp:
+            s3client.download_file(bucket, key, tmp.name)
+            print(tmp.name)
+            model = joblib.load(tmp.name)
+
+        # 2) 예측 수행 & 예측값 전처리
+        forecast = model.predict(future)
+        forecast['yhat'] = np.where(
+                forecast['yhat'] < 0.3, 0,
+                np.ceil(forecast['yhat'])
+            )
+        
+        if len(forecast.query("yhat > 0")) != 0 :
+            # 예측 결과가 0보다 큰 경우만 적재
+            print(forecast.query("yhat > 0")[['ds', 'yhat']].assign(**group_values))
+            
+            predictions.append(
+                forecast.query("yhat > 0")[['ds', 'yhat']]\
+                    .assign(**group_values)
+            )
+    # end for-loop
+    
+    # 예상 수강 신청일자 계산 : ds - 20일 (데이터상의 중앙값 기준)
+    # 예상결과가 오늘 일자보다 미래인 경우만 적재
+    all_preds = pd.concat(predictions)
+    all_preds['pred_aply_bgn'] = all_preds["ds"] - pd.Timedelta(days=20)
+    all_preds = (
+        all_preds[all_preds['pred_aply_bgn'] > today]
+        .drop(columns=['ds'])
+    )
+    
+    logging.info(f"Preditions : ")
+    print(all_preds.head())
+    logging.info(f"=================================")
+    
+    logging.info(f"[@@] Saved CSV File in local : {path}")
+    path = f"{Variable.get('DATA_DIR')}/pred_prophet.csv"
+    res.to_csv(path, index=False)
+    return path
