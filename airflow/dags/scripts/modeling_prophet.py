@@ -124,7 +124,8 @@ def train_prophet_models(schema, table, bucket, s3_base_prefix, s3_conn="s3_conn
     
     # metadata저장 : 이번에 훈련된 group 정보
     metadata = {
-        "trained_at": datetime.now(),
+        "trained_at_based_execution_date": context['execution_date'].isoformat(),
+        "trained_at" : datetime.now().isoformat(),
         "model_date": today,
         "groups": trained_groups,
         "algorithm": "prophet"
