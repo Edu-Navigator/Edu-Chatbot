@@ -16,7 +16,7 @@ from scripts.lecture_task import (
 with DAG(
     dag_id="01_lecture_dag",
     start_date=datetime(2025, 12, 9), 
-    schedule="30 1 * * *", # utc 새벽 1시 = kst 오전 10시
+    schedule="0 2 * * *", # utc 새벽 1시 = kst 오전 10시
     catchup=False,
     tags=["01", "postgres", "lecture", 'edu_info'],
 ) as dag:
@@ -28,8 +28,6 @@ with DAG(
         task_id="wait_01_crawling_images_digilearning",
         external_dag_id="01_crawling_images_digilearning",
         external_task_id=None,
-        allowed_states=["success"],
-        failed_states=["failed", "skipped"],
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,   # 최대 30분 대기
@@ -39,8 +37,6 @@ with DAG(
         task_id="wait_01_collect_location_info",
         external_dag_id="01_collect_location_info",
         external_task_id=None,
-        allowed_states=["success"],
-        failed_states=["failed", "skipped"],
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
@@ -50,8 +46,6 @@ with DAG(
         task_id="wait_01_digital_learning_crawl_v20251215",
         external_dag_id="01_digital_learning_crawl_v20251215",
         external_task_id=None,
-        allowed_states=["success"],
-        failed_states=["failed", "skipped"],
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
@@ -61,8 +55,6 @@ with DAG(
         task_id="wait_01_suji_gg_pipeline",
         external_dag_id="01_suji_gg_pipeline",
         external_task_id=None,
-        allowed_states=["success"],
-        failed_states=["failed", "skipped"],
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
@@ -90,16 +82,20 @@ with DAG(
     # 3. 의존성 정의
     # -------------------------------
     # 1~4번 DAG가 모두 끝난 뒤 lecture 시작
-    [
-        wait_crawling_images,
-        wait_etl_locations,
-        wait_digital_learning,
-        wait_suji_gg_pipeline
-    ] >> [suji_path, gg_path, 
-        # digi_path,
-        digi_end_path]
+
+
+    for t in [suji_path, gg_path, digi_end_path]:  # 이후 digi_path 추가
+        [
+            wait_crawling_images,
+            wait_etl_locations,
+            wait_digital_learning,
+            wait_suji_gg_pipeline,
+        ] >> t
 
     # lecture DAG 내부 의존성
-    [suji_path, gg_path, 
-    # digi_path,
-    digi_end_path] >> final_combine >> location_image_update >> edu_info_update
+    [
+        suji_path,
+        gg_path,
+        # digi_path,
+        digi_end_path,
+    ] >> final_combine >> location_image_update >> edu_info_update
