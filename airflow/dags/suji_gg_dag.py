@@ -1,6 +1,6 @@
 from airflow import DAG
 from datetime import datetime
-from airflow.sensors.external_task import ExternalTaskSensor
+# from airflow.sensors.external_task import ExternalTaskSensor
 
 from scripts.gg_crawl_task import gg_crawl_task
 from scripts.gg_load_task import gg_load_task
@@ -17,16 +17,16 @@ with DAG(
     tags=['01', "suji", "gyeonggi"],
 ) as dag:
     
-    wait_digital_learning = ExternalTaskSensor(
-        task_id="wait_01_digital_learning_crawl",
-        external_dag_id="01_digital_learning_crawl_v20251215",
-        external_task_id=None,
-        allowed_states=["success"],
-        failed_states=["failed", "skipped"],
-        mode="reschedule",
-        poke_interval=60,
-        timeout=60 * 30,
-    )
+    # wait_digital_learning = ExternalTaskSensor(
+    #     task_id="wait_01_digital_learning_crawl",
+    #     external_dag_id="01_digital_learning_crawl_v20251215",
+    #     external_task_id=None,
+    #     allowed_states=["success"],
+    #     failed_states=["failed", "skipped"],
+    #     mode="reschedule",
+    #     poke_interval=60,
+    #     timeout=60 * 30,
+    # )
 
     suji_crawl_path = suji_crawl_task()
     suji_load = suji_load_task(
@@ -43,4 +43,4 @@ with DAG(
 
     suji_load >> gg_api_path
 
-    wait_digital_learning >> suji_crawl_path
+    # wait_digital_learning >> suji_crawl_path
