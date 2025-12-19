@@ -8,7 +8,7 @@ from scripts.digilearn_task import *
 with DAG(
     dag_id="01_digital_learning_crawl_v20251215",
     start_date=datetime(2025, 12, 10),
-    schedule = "0 1 * * *", # utc 새벽 1시 = kst 오전 10시
+    schedule = "30 1 * * *", # utc 새벽 1시 = kst 오전 10시
     catchup=False,
     tags=['01', 'raw_data', "digital_learn"],
 ) as dag:
