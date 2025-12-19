@@ -14,7 +14,7 @@ with DAG(
     train_prophet_models(
         schema = 'processed',
         table  = 'lecture',
-        bucket = 'team7-bucket',
+        bucket = 'team7-batch',
         s3_base_prefix = "models/prophet",
         s3_conn = "aws_default"
     )
