@@ -1,6 +1,7 @@
 from airflow.models.dag import DAG 
 from datetime import datetime
 from airflow.sensors.external_task import ExternalTaskSensor
+import pendulum
 
 from scripts.lecture_task import (
     suji_data_processing_task,
@@ -14,11 +15,12 @@ from scripts.lecture_task import (
 
 
 with DAG(
-    dag_id="01_lecture_dag",
-    start_date=datetime(2025, 12, 9), 
-    schedule="0 1 * * *", # utc 새벽 1시 = kst 오전 10시
+    dag_id="02_lecture_dag",
+    start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
+                                tz=pendulum.timezone("Asia/Seoul")), 
+    schedule="0 12 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup=False,
-    tags=["01", "postgres", "lecture", 'edu_info'],
+    tags=["02", "postgres", "lecture", 'edu_info'],
 ) as dag:
     
     # -------------------------------
@@ -31,6 +33,7 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,   # 최대 30분 대기
+        execution_date_fn=lambda dt: dt,
     )
 
     wait_etl_locations = ExternalTaskSensor(
@@ -40,15 +43,17 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
+        execution_date_fn=lambda dt: dt,
     )
 
     wait_digital_learning = ExternalTaskSensor(
-        task_id="wait_01_digital_learning_crawl_v20251215",
-        external_dag_id="01_digital_learning_crawl_v20251215",
+        task_id="wait_01_digital_learning_crawl",
+        external_dag_id="01_digital_learning_crawl",
         external_task_id=None,
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
+        execution_date_fn=lambda dt: dt,
     )
 
     wait_suji_gg_pipeline = ExternalTaskSensor(
@@ -58,6 +63,7 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
+        execution_date_fn=lambda dt: dt,
     )
     
     # -------------------------------
@@ -79,11 +85,8 @@ with DAG(
     edu_info_update = edu_info_task()
 
     # -------------------------------
-    # 3. 의존성 정의
+    # 3. 의존성 정의 : 1~4번 DAG가 모두 끝난 뒤 lecture 시작
     # -------------------------------
-    # 1~4번 DAG가 모두 끝난 뒤 lecture 시작
-
-
     for t in [suji_path, gg_path, digi_end_path]:  # 이후 digi_path 추가
         [
             wait_crawling_images,

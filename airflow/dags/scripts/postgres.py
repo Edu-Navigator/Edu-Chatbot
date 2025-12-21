@@ -10,7 +10,8 @@ logger.setLevel(logging.INFO)
 
 @task    
 def table_full_refresh(data, schema, table, conn_name="conn_production", **context):
-    if type(data) :
+    if isinstance(data, str):
+        # local 경로값인 경우
         df = pd.read_csv(data)
     else :
         df = pd.DataFrame(data)
