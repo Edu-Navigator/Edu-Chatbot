@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import ShortCircuitOperator
 from datetime import datetime
+import pendulum
 
 from scripts.modeling_prophet import check_latest_model_exists, predict_prophet
 from scripts.postgres import table_full_refresh
@@ -8,14 +9,14 @@ from scripts.postgres import table_full_refresh
 
 with DAG(
     dag_id="03_daily_predict_prophet",
-    start_date=datetime(2024, 1, 1),
-    schedule=None,  # "0 12 * * *" 매일 12시 
+    start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
+                                tz=pendulum.timezone("Asia/Seoul")), 
+    schedule="30 13 * * *", # start_date의 tz 기준 오전 11시 30분 실행
     catchup=False,
     tags=["03", "predict", "prophet"],
 ) as dag:
 
     # latest에 pkl 파일이없으면 다음 task 모두 skip
-    
     check_model = ShortCircuitOperator(
         task_id="check_latest_model",
         python_callable=check_latest_model_exists,
