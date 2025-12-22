@@ -18,7 +18,7 @@ with DAG(
     dag_id="02_lecture_dag",
     start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
                                 tz=pendulum.timezone("Asia/Seoul")), 
-    schedule="00 17 * * *", # start_date의 tz 기준 오전 10시 실행
+    schedule="20 10 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup=False,
     tags=["02", "postgres", "lecture", 'edu_info'],
 ) as dag:
@@ -33,7 +33,7 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
-        execution_date_fn=lambda dt: dt - timedelta(minutes=30),
+        execution_date_fn=lambda dt: dt - timedelta(minutes=20),
     )
 
     wait_suji_gg_pipeline = ExternalTaskSensor(
@@ -43,7 +43,7 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
-        execution_date_fn=lambda dt: dt - timedelta(minutes=20),
+        execution_date_fn=lambda dt: dt - timedelta(minutes=10),
     )
 
     wait_crawling_images = ExternalTaskSensor(
@@ -52,8 +52,8 @@ with DAG(
         external_task_id=None,
         mode="reschedule",
         poke_interval=60,
-        timeout=60 * 30,   # 최대 30분 대기
-        execution_date_fn=lambda dt: dt - timedelta(minutes=10),
+        timeout=60 * 30,
+        execution_date_fn=lambda dt: dt - timedelta(minutes=5),
     )
 
     wait_etl_locations = ExternalTaskSensor(
@@ -63,7 +63,7 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
-        execution_date_fn=lambda dt: dt - timedelta(minutes=10),
+        execution_date_fn=lambda dt: dt - timedelta(minutes=5),
     )
     
     # -------------------------------
