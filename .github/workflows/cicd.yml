@@ -67,7 +67,7 @@ jobs:
     - name: Sync to S3
       run: |
         # DAGs만 업로드
-        aws s3 sync ./airflow/dags/ s3://${{ vars.S3_BUCKET_NAME }}airflow/dags/ \
+        aws s3 sync ./airflow/dags/ s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
           --exclude ".git/*" \
           --exclude ".github/*" \
           --exclude "*.md" \
@@ -173,68 +173,3 @@ jobs:
         echo "⚙️  Airflow Worker: team7-airflow-worker"
         echo "🕐 Deployed at: $(date '+%Y-%m-%d %H:%M:%S')"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-  # 배포 실패 시 작성자에게 이메일 알림
-  notify-failure:
-    needs: [deploy-to-main, deploy-to-worker]
-    if: failure()
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Get PR author from merge commit
-      id: pr-author
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        PR_NUMBER=$(echo "${{ github.event.head_commit.message }}" | grep -oE '#[0-9]+' | tr -d '#')
-
-        if [ -z "$PR_NUMBER" ]; then
-          echo "PR 번호를 찾을 수 없습니다."
-          exit 0
-        fi
-
-        AUTHOR=$(curl -s \
-          -H "Authorization: token $GITHUB_TOKEN" \
-          -H "Accept: application/vnd.github+json" \
-          https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER \
-          | jq -r '.user.login')
-
-        echo "author=$AUTHOR" >> $GITHUB_OUTPUT
-
-    - name: Get PR author email
-      id: get-email
-      run: |
-        EMAIL=$(echo '${{ secrets.EMAIL_MAPPING }}' | jq -r '.["${{ steps.pr-author.outputs.author }}"] // empty')
-        echo "email=$EMAIL" >> $GITHUB_OUTPUT
-
-    - name: Send failure email to PR author
-      if: steps.get-email.outputs.email != ''
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 587
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: "[Airflow CD] 배포 실패 알림"
-        to: ${{ steps.get-email.outputs.email }}
-        from: GitHub Actions
-        body: |
-          안녕하세요 ${{ steps.pr-author.outputs.author }}님,
-          ...
-          본인이 생성한 PR이 main에 merge된 이후
-          Airflow CD 배포 과정에서 실패했습니다.
-
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-           실패 정보
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-          • Repository : ${{ github.repository }}
-          • Commit SHA : ${{ github.sha }}
-          • Commit Msg : ${{ github.event.head_commit.message }}
-          • Failed Job : ${{ github.job }}
-          • Run ID     : ${{ github.run_id }}
-
-           실패 로그 바로가기
-          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-          확인 부탁드립니다.
