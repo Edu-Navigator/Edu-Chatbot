@@ -11,6 +11,42 @@ from airflow.models import Variable
 
 @task
 def suji_crawl_task():
+    """
+    수지구청 평생학습 홈페이지에서 교육 강좌 정보를 크롤링하여 CSV 파일로 저장한다.
+
+    Selenium을 사용하여 수지구청 평생학습 강좌 목록 페이지에 접근한 뒤,
+    진행 중인 강좌와 진행 마감된 강좌의 상세 페이지를 순회하며
+    강좌 정보를 수집한다. 수집된 데이터는 정규화된 컬럼 구조로 변환하여
+    CSV 파일로 저장하고, 저장 경로를 XCom으로 반환한다.
+
+    Returns
+    -------
+    str
+        크롤링 결과가 저장된 CSV 파일의 경로이다.
+        downstream task에서 입력 경로로 사용된다.
+
+    Notes
+    -----
+    - 데이터 출처
+        - 수지구청 평생학습 홈페이지
+    - 크롤링 방식
+        - Selenium(WebDriver) 기반 동적 페이지 크롤링을 수행한다.
+        - BeautifulSoup을 이용한 HTML 파싱을 수행한다.
+    - 수집 대상
+        - 진행 중인 강좌
+        - 진행 마감된 강좌
+    - 데이터 처리
+        - 목록 페이지에서 강좌 목록을 수집한다.
+        - 상세 페이지 단위로 추가 정보를 파싱한다.
+        - 내부 표준 컬럼 스키마에 맞게 DataFrame을 구성한다.
+    - 결과 저장
+        - Airflow Variable `DATA_DIR` 경로 하위에
+        `suji_crawl_res.csv` 파일로 저장한다.
+    - 반환값
+        - CSV 파일 경로(str)를 반환한다.
+        - downstream task에서 입력 경로로 사용된다.
+    """
+
     url = "https://www.sujigu.go.kr/lmth/07_itedu01_connect_01.asp"
 
     chrome_options = Options()
@@ -27,6 +63,20 @@ def suji_crawl_task():
         wait = WebDriverWait(driver, 10)
 
         def parse_detail_page(link):
+            """
+            강좌 상세 페이지를 파싱하여 단일 강좌 정보를 딕셔너리로 반환한다.
+
+            Parameters
+            ----------
+            link : str
+                강좌 상세 페이지 URL.
+
+            Returns
+            -------
+            dict or None
+                강좌 상세 정보가 담긴 딕셔너리.
+                페이지 파싱에 실패한 경우 None을 반환한다.
+            """
             try:
                 driver.get(link)
                 wait.until(

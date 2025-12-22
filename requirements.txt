@@ -9,3 +9,4 @@ pytest
 boto3
 scikit-learn
 Pillow
+prophet>=1.1

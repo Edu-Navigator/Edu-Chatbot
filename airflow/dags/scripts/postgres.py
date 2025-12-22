@@ -9,9 +9,13 @@ logger = logging.getLogger("airflow.task")
 logger.setLevel(logging.INFO)
 
 @task    
-def table_full_refresh(data:dict, schema, table, conn_name="conn_production", **context):
-    
-    df = pd.DataFrame(data)
+def table_full_refresh(data, schema, table, conn_name="conn_production", **context):
+    if isinstance(data, str):
+        # local 경로값인 경우
+        df = pd.read_csv(data)
+    else :
+        df = pd.DataFrame(data)
+
     # 빈 DataFrame 체크
     if df.empty:
         logging.warning(f"[경고] 빈 DataFrame - {schema}.{table} 적재 스킵")

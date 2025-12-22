@@ -1,6 +1,7 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.utils.task_group import TaskGroup
+import pendulum
 
 from scripts.postgres import table_full_refresh
 from scripts.extract_locations import *
@@ -8,8 +9,9 @@ from scripts.extract_locations import *
 
 with DAG(
     dag_id = '01_collect_location_info',
-    start_date = datetime(2025, 12, 10),
-    schedule = None, # 스케줄 없음
+    start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
+                                tz=pendulum.timezone("Asia/Seoul")), 
+    schedule="00 15 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup = False,
     tags=['01', 'raw_data', "location"],
 ) as dag :
@@ -53,3 +55,5 @@ with DAG(
         )
     
     tg2 >> tg3
+
+    # wait_crawling_images >> [tg1, tg2]

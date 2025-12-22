@@ -1,13 +1,15 @@
 from datetime import datetime
 from airflow import DAG
+import pendulum
 
 from scripts.craw_imgaes import *
 
 
 with DAG(
     dag_id = '01_crawling_images_digilearning',
-    start_date = datetime(2025, 12, 10),
-    schedule = None, # 스케줄 없음
+    start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
+                                tz=pendulum.timezone("Asia/Seoul")), 
+    schedule="00 15 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup = False,
     tags=['01', 's3', "images"],
 ) as dag :

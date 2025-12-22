@@ -1,14 +1,15 @@
 from airflow import DAG
-from airflow.utils.dates import days_ago
 from datetime import datetime
+import pendulum
 
 from scripts.digilearn_task import *
 
 
 with DAG(
-    dag_id="01_digital_learning_crawl_v20251215",
-    start_date=datetime(2025, 12, 10),
-    schedule = None, # 스케줄 없음
+    dag_id="01_digital_learning_crawl",
+    start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
+                                tz=pendulum.timezone("Asia/Seoul")), 
+    schedule="00 15 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup=False,
     tags=['01', 'raw_data', "digital_learn"],
 ) as dag:
@@ -22,4 +23,3 @@ with DAG(
         table  = "DIGITAL_LEARNING_END", 
         conn_name = "conn_production"
     )
-
