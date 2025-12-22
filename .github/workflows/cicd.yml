@@ -67,7 +67,7 @@ jobs:
     - name: Sync to S3
       run: |
         # DAGs만 업로드
-        aws s3 sync ./airflow/dags/ s3://THIS_BUCKET_DOES_NOT_EXIST/airflow/dags/ \
+        aws s3 sync ./airflow/dags/ s3://${{ vars.S3_BUCKET_NAME }}airflow/dags/ \
           --exclude ".git/*" \
           --exclude ".github/*" \
           --exclude "*.md" \
