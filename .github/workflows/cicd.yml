@@ -1,15 +1,13 @@
-# cicd.yml
-
 name: Airflow DAG CI/CD
 
 on:
   push:
     branches: [ main, 'feature/**' ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   dag-test:
+    # feature 브랜치에서만 CI 테스트 실행
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -49,7 +47,6 @@ jobs:
 
   # main 브랜치에 push될 때만 배포
   deploy-to-s3:
-    needs: dag-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     
