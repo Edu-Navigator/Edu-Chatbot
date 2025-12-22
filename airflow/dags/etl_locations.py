@@ -11,7 +11,7 @@ with DAG(
     dag_id = '01_collect_location_info',
     start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
                                 tz=pendulum.timezone("Asia/Seoul")), 
-    schedule="0 12 * * *", # start_date의 tz 기준 오전 10시 실행
+    schedule="30 13 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup = False,
     tags=['01', 'raw_data', "location"],
 ) as dag :
