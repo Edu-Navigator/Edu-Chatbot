@@ -18,7 +18,7 @@ with DAG(
     dag_id="02_lecture_dag",
     start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
                                 tz=pendulum.timezone("Asia/Seoul")), 
-    schedule="30 13 * * *", # start_date의 tz 기준 오전 10시 실행
+    schedule="40 13 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup=False,
     tags=["02", "postgres", "lecture", 'edu_info'],
 ) as dag:
