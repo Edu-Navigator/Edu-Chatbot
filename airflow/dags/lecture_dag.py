@@ -1,5 +1,5 @@
 from airflow.models.dag import DAG 
-from datetime import datetime
+from datetime import datetime, timedelta
 from airflow.sensors.external_task import ExternalTaskSensor
 import pendulum
 
@@ -18,7 +18,7 @@ with DAG(
     dag_id="02_lecture_dag",
     start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
                                 tz=pendulum.timezone("Asia/Seoul")), 
-    schedule="00 15 * * *", # start_date의 tz 기준 오전 10시 실행
+    schedule="00 17 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup=False,
     tags=["02", "postgres", "lecture", 'edu_info'],
 ) as dag:
@@ -26,26 +26,6 @@ with DAG(
     # -------------------------------
     # 앞선 DAG의 success를 기다리는 센서
     # -------------------------------
-    wait_crawling_images = ExternalTaskSensor(
-        task_id="wait_01_crawling_images_digilearning",
-        external_dag_id="01_crawling_images_digilearning",
-        external_task_id=None,
-        mode="reschedule",
-        poke_interval=60,
-        timeout=60 * 30,   # 최대 30분 대기
-        execution_date_fn=lambda dt: dt,
-    )
-
-    wait_etl_locations = ExternalTaskSensor(
-        task_id="wait_01_collect_location_info",
-        external_dag_id="01_collect_location_info",
-        external_task_id=None,
-        mode="reschedule",
-        poke_interval=60,
-        timeout=60 * 30,
-        execution_date_fn=lambda dt: dt,
-    )
-
     wait_digital_learning = ExternalTaskSensor(
         task_id="wait_01_digital_learning_crawl",
         external_dag_id="01_digital_learning_crawl",
@@ -53,7 +33,7 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
-        execution_date_fn=lambda dt: dt,
+        execution_date_fn=lambda dt: dt - timedelta(minutes=30),
     )
 
     wait_suji_gg_pipeline = ExternalTaskSensor(
@@ -63,7 +43,27 @@ with DAG(
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 30,
-        execution_date_fn=lambda dt: dt,
+        execution_date_fn=lambda dt: dt - timedelta(minutes=20),
+    )
+
+    wait_crawling_images = ExternalTaskSensor(
+        task_id="wait_01_crawling_images_digilearning",
+        external_dag_id="01_crawling_images_digilearning",
+        external_task_id=None,
+        mode="reschedule",
+        poke_interval=60,
+        timeout=60 * 30,   # 최대 30분 대기
+        execution_date_fn=lambda dt: dt - timedelta(minutes=10),
+    )
+
+    wait_etl_locations = ExternalTaskSensor(
+        task_id="wait_01_collect_location_info",
+        external_dag_id="01_collect_location_info",
+        external_task_id=None,
+        mode="reschedule",
+        poke_interval=60,
+        timeout=60 * 30,
+        execution_date_fn=lambda dt: dt - timedelta(minutes=10),
     )
     
     # -------------------------------
