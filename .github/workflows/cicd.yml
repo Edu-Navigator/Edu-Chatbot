@@ -221,3 +221,20 @@ jobs:
         body: |
           안녕하세요 ${{ steps.pr-author.outputs.author }}님,
           ...
+          본인이 생성한 PR이 main에 merge된 이후
+          Airflow CD 배포 과정에서 실패했습니다.
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           실패 정보
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          • Repository : ${{ github.repository }}
+          • Commit SHA : ${{ github.sha }}
+          • Commit Msg : ${{ github.event.head_commit.message }}
+          • Failed Job : ${{ github.job }}
+          • Run ID     : ${{ github.run_id }}
+
+           실패 로그 바로가기
+          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          확인 부탁드립니다.
