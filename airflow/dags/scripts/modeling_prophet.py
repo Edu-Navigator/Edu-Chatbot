@@ -66,8 +66,8 @@ def train_prophet_models(schema, table, bucket, s3_base_prefix, s3_conn="s3_conn
     ) # 각 그룹의 최소 row 수가 5개 이상
     
     # group별 모델 훈련 및 pkl 파일 저장
-    today     = context['ds']
-    today_key = context['execution_date'].strftime("%Y%m%d")
+    today     = context['data_interval_end'].to_date_string()
+    today_key = context['data_interval_end'].strftime("%Y%m%d")
     
     s3hook   = S3Hook(aws_conn_id=s3_conn)
     s3client = s3hook.get_conn() # boto3 client
