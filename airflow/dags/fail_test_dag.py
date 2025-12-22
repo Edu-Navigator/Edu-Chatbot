@@ -2,19 +2,21 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
 
+def fail_task():
+    raise Exception("의도적으로 실패")
+
 default_args = {
-    "email": ["symoon1007@gmail.com"],
+    "owner": "airflow",
+    "email": ["symoon1007@gmail.com"],  
     "email_on_failure": True,
     "email_on_retry": False,
+    "retries": 0,
 }
 
-def fail_task():
-    raise ValueError("의도적인 실패 테스트")
-
 with DAG(
-    dag_id="test_failure_email",
+    dag_id="test_fail_email",
     start_date=datetime(2025, 1, 1),
-    schedule_interval=None,
+    schedule=None,
     catchup=False,
     default_args=default_args,
 ) as dag:
