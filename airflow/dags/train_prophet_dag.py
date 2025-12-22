@@ -8,7 +8,7 @@ with DAG(
     dag_id="03_weekly_train_prophet",
     start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
                                 tz=pendulum.timezone("Asia/Seoul")), 
-    schedule="30 14 * * 1", # start_date의 tz 기준 매주 월요일 011:00 "0 11 * * 1"
+    schedule="30 15 * * 1", # start_date의 tz 기준 매주 월요일 011:00 "0 11 * * 1"
     catchup=False,
     tags=["03", "train", "prophet"],
 ) as dag:

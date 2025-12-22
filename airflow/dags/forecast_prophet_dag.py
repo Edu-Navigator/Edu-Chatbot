@@ -11,7 +11,7 @@ with DAG(
     dag_id="03_daily_predict_prophet",
     start_date=pendulum.datetime(2025, 12, 1, 0, 0, 
                                 tz=pendulum.timezone("Asia/Seoul")), 
-    schedule="00 15 * * *", # start_date의 tz 기준 오전 11시 30분 실행
+    schedule="40 15 * * *", # start_date의 tz 기준 오전 11시 30분 실행
     catchup=False,
     tags=["03", "predict", "prophet"],
 ) as dag:
