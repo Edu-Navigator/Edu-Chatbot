@@ -5,6 +5,7 @@ import pendulum
 
 from scripts.postgres import table_full_refresh
 from scripts.extract_locations import *
+from airflow.dags.common.default_args import DEFAULT_ARGS
 
 
 with DAG(
@@ -14,6 +15,7 @@ with DAG(
     schedule="15 10 * * *", # start_date의 tz 기준 오전 10시 15분 실행
     catchup = False,
     tags=['01', 'raw_data', "location"],
+    default_args=DEFAULT_ARGS,
 ) as dag :
     
     # 디지털 배움터 교육장 API

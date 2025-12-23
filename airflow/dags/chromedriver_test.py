@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.remote_connection import RemoteConnection
+from airflow.dags.common.default_args import DEFAULT_ARGS
 
 def selenium_test2():
     chrome_options = Options()
@@ -35,6 +36,7 @@ with DAG(
     schedule_interval=None,  # 수동 실행
     catchup=False,
     tags=["test", "selenium"],
+    default_args=DEFAULT_ARGS,
 ):
 
     test_task = PythonOperator(

@@ -12,6 +12,7 @@ from scripts.lecture_task import (
     lecture_location_image_task,
     edu_info_task
 )
+from airflow.dags.common.default_args import DEFAULT_ARGS
 
 
 with DAG(
@@ -21,6 +22,7 @@ with DAG(
     schedule="20 10 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup=False,
     tags=["02", "postgres", "lecture", 'edu_info'],
+    default_args=DEFAULT_ARGS,
 ) as dag:
     
     # -------------------------------

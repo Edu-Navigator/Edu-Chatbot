@@ -17,6 +17,7 @@ from airflow.utils.dates import days_ago
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from airflow.dags.common.default_args import DEFAULT_ARGS
 import pandas as pd
 import time
 
@@ -164,6 +165,7 @@ with DAG(
     schedule_interval=None,   
     catchup=False,
     tags=["test", "ci"],
+    default_args=DEFAULT_ARGS,
 ) as dag:
 
 

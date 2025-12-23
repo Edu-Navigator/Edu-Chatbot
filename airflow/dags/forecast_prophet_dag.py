@@ -5,7 +5,7 @@ import pendulum
 
 from scripts.modeling_prophet import check_latest_model_exists, predict_prophet
 from scripts.postgres import table_full_refresh
-
+from airflow.dags.common.default_args import DEFAULT_ARGS
 
 with DAG(
     dag_id="03_daily_predict_prophet",
@@ -14,6 +14,7 @@ with DAG(
     schedule="35 10 * * *", # start_date의 tz 기준 오전 10시 35분 실행
     catchup=False,
     tags=["03", "predict", "prophet"],
+    default_args=DEFAULT_ARGS,
 ) as dag:
 
     # latest에 pkl 파일이없으면 다음 task 모두 skip
