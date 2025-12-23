@@ -12,7 +12,7 @@ from scripts.lecture_task import (
     lecture_location_image_task,
     edu_info_task
 )
-from airflow.dags.common.default_args import DEFAULT_ARGS
+from common.default_args import DEFAULT_ARGS
 
 
 with DAG(

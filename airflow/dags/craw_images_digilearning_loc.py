@@ -3,7 +3,7 @@ from airflow import DAG
 import pendulum
 
 from scripts.craw_imgaes import *
-from airflow.dags.common.default_args import DEFAULT_ARGS
+from common.default_args import DEFAULT_ARGS
 
 
 with DAG(

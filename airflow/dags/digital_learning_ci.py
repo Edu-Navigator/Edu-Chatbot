@@ -17,7 +17,7 @@ from airflow.utils.dates import days_ago
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from airflow.dags.common.default_args import DEFAULT_ARGS
+from common.default_args import DEFAULT_ARGS
 import pandas as pd
 import time
 

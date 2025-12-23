@@ -3,7 +3,7 @@ from datetime import datetime
 import pendulum
 
 from scripts.modeling_prophet import train_prophet_models
-from airflow.dags.common.default_args import DEFAULT_ARGS
+from common.default_args import DEFAULT_ARGS
 
 with DAG(
     dag_id="03_weekly_train_prophet",
