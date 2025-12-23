@@ -5,7 +5,7 @@ import pendulum
 
 from scripts.postgres import table_full_refresh
 from scripts.extract_locations import *
-from airflow.dags.common.default_args import DEFAULT_ARGS
+from common.default_args import DEFAULT_ARGS
 
 
 with DAG(

@@ -5,7 +5,7 @@ import pendulum
 
 from scripts.modeling_prophet import check_latest_model_exists, predict_prophet
 from scripts.postgres import table_full_refresh
-from airflow.dags.common.default_args import DEFAULT_ARGS
+from common.default_args import DEFAULT_ARGS
 
 with DAG(
     dag_id="03_daily_predict_prophet",
