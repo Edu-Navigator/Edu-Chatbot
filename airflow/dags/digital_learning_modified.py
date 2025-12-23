@@ -3,6 +3,7 @@ from datetime import datetime
 import pendulum
 
 from scripts.digilearn_task import *
+from airflow.dags.common.default_args import DEFAULT_ARGS
 
 
 with DAG(
@@ -12,6 +13,7 @@ with DAG(
     schedule="00 10 * * *", # start_date의 tz 기준 오전 10시 실행
     catchup=False,
     tags=['01', 'raw_data', "digital_learn"],
+    default_args=DEFAULT_ARGS,
 ) as dag:
 
     t1 = collect_list()

@@ -3,6 +3,7 @@ from airflow import DAG
 import pendulum
 
 from scripts.craw_imgaes import *
+from airflow.dags.common.default_args import DEFAULT_ARGS
 
 
 with DAG(
@@ -12,6 +13,7 @@ with DAG(
     schedule="15 10 * * *", # start_date의 tz 기준 오전 10시 15분 실행
     catchup = False,
     tags=['01', 's3', "images"],
+    default_args=DEFAULT_ARGS,
 ) as dag :
     
     res_scrape  = scape_images(

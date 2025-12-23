@@ -6,6 +6,7 @@ from scripts.gg_crawl_task import gg_crawl_task
 from scripts.gg_load_task import gg_load_task
 from scripts.suji_crawl_task import suji_crawl_task
 from scripts.suji_load_task import suji_load_task
+from airflow.dags.common.default_args import DEFAULT_ARGS
 
 
 # DAG
@@ -16,6 +17,7 @@ with DAG(
     schedule="10 10 * * *", # start_date의 tz 기준 오전 10시 10분 실행
     catchup=False,
     tags=['01', "suji", "gyeonggi"],
+    default_args=DEFAULT_ARGS,
 ) as dag:
 
     suji_crawl_path = suji_crawl_task()
