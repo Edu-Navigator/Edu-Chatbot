@@ -17,9 +17,34 @@ logger.setLevel(logging.INFO)
 
 @task
 def scape_images(location_url, wait_time, **context):
+    """
+    location_url의 이미지 정보 크롤링하고 리스트로 반환한다
+
+    location_url의 페이지별로
+    교육 장소 이미지 링크, 교육 장소 명칭을 수집한다.
+    
+    Parameters
+    ----------
+    location_url : str
+        이미지 크롤링할 교육 장소 url
+    wait_time : int
+        대기시간 (동적요소 올라올때까지 대기, 페이지 이동 후 대기 등)
+
+    Returns
+    -------
+    list
+        이미지 url과 장소명을 포함
+        downstream task에서 입력으로 사용된다.
+
+    Notes
+    -----
+    - 페이지네이션 처리 로직
+        - URL의 페이지네이션은 마지막 페이지여도 "다음 페이지"버튼이 활성화 되어있다.
+        - 현 페이지 번호와 다음 페이지 번호를 비교하여, 마지막 페이지를 탐지한다.
+    """
     driver = webdriver.get_driver()
     
-    location_url = "https://www.xn--2z1bw8k1pjz5ccumkb.kr/edc/crse/place.do"
+    # location_url = "https://www.xn--2z1bw8k1pjz5ccumkb.kr/edc/crse/place.do"
     all_images = []
     
     try :
@@ -92,7 +117,40 @@ def scape_images(location_url, wait_time, **context):
         driver.quit()
 
 @task
-def upload_to_s3(image_list: list, bucket, base_key, batch_size=20, delay=5,conn_name='s3_conn', **context):
+def upload_to_s3(image_list, bucket, base_key, batch_size=20, delay=5,conn_name='s3_conn', **context):
+    """
+    이미지를 s3에 업로드.
+
+    scape_images 태스크로 수집된 이미지 정보를 input으로 사용하여
+    s3에 resize 후 업로드를 진행한다.
+
+    Parameters
+    ----------
+    image_list : list
+        s3에 업로드할 image 정보를 포함하는 list
+    bucket : str
+        데이터 적재용 s3 버킷명
+    batch_size : int
+        default = 20
+        이미지 다운로드 진행상황 출력 및 대기를 위해 설정
+    delay : int
+        default = 5
+        batch_size의 이미지 다운 후 대기할 시간(second) 설정
+    conn_name : str
+        Airflow Connection에 등록된 s3 연결명
+
+
+    Notes
+    -----
+    - 입력 데이터
+        - upstream task에서 전달된 값을 사용한다.
+    - 이미지 s3 저장
+        - 고정된 사이즈의 이미지로 resize
+        - 장소명을 image 파일명으로 사용
+    - 실행 특성
+        - s3 업로드 실패시 log만 남기고 다음 적재 대상으로 넘어간다.
+        - 이미지는 부가요소이기 때문에, Error 발생시키지 않음
+    """
     uploaded_count = 0
     failed_count = 0
     failed_images = []
