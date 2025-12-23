@@ -380,13 +380,20 @@ def lecture_location_image_task():
     )
 
     # 카테고리 -> 이미지 URL 매핑
+    # [수정] 외부에서 사용시 한글 jpg가 로드 안되는 현상으로 영문 파일명 mapping 로직 추가
     BASE_IMAGE_URL = "https://team7-batch.s3.ap-northeast-2.amazonaws.com/images/made/"
-
+    category_map = {
+        "기초 스마트폰": "basic",
+        "스마트폰 활용": "applied",
+        "컴퓨터": "computer",
+        "키오스크": "kiosk"
+    }
+    df["lctr_cate_eng"] = df["LCTR_CATEGORY"].map(category_map)
     mask = df["LCTR_IMAGE"].isna() & df["LCTR_CATEGORY"].notna()
 
     df.loc[mask, "LCTR_IMAGE"] = (
         BASE_IMAGE_URL
-        + df.loc[mask, "LCTR_CATEGORY"].astype(str)
+        + df.loc[mask, "lctr_cate_eng"].astype(str)
         + ".jpg"
     )
 
