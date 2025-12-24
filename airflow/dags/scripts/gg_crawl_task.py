@@ -5,7 +5,7 @@ import math
 from airflow.models import Variable
 
 @task
-def gg_crawl_task():
+def gg_crawl_task(web_date):
     """
     경기도 평생학습 강좌 정보를 OpenAPI를 통해 수집하여 CSV 파일로 저장한다.
 
