@@ -104,22 +104,55 @@ with DAG(
     @task
     def gg_load_task(csv_path: str, web_date: date):
         hook = PostgresHook(postgres_conn_id="conn_production")
+
+        copy_sql = """
+            COPY raw.gg_lifelong_learning (
+                lctr_nm,
+                lctr_bgn,
+                lctr_end,
+                lctr_bgn_time,
+                lctr_end_time,
+                lctr_content,
+                lctr_target,
+                lctr_way,
+                lctr_day,
+                lctr_locate,
+                lctr_pcsp,
+                lctr_price,
+                lctr_address,
+                lctr_operate,
+                operate_telephone,
+                aply_bgn,
+                aply_end,
+                aply_way,
+                select_way,
+                aply_url,
+                notuse1,
+                notuse2,
+                notuse3,
+                notuse4
+            )
+            FROM STDIN
+            WITH (FORMAT csv, HEADER true)
+        """
+
         with hook.get_conn() as conn:
             with conn.cursor() as cursor:
+                with open(csv_path, "r") as f:
+                    cursor.copy_expert(copy_sql, f)
+
+                # source_updated_at 업데이트
                 cursor.execute(
                     """
-                    INSERT INTO raw.gg_lifelong_learning (
-                        col1,
-                        col2,
-                        source_updated_at
-                    )
-                    VALUES (%s, %s, %s)
+                    UPDATE raw.gg_lifelong_learning
+                    SET source_updated_at = %s
+                    WHERE source_updated_at IS NULL
                     """,
-                    ("value1", "value2", web_date),
+                    (web_date,),
                 )
+
             conn.commit()
 
-        print("DB 적재 완료")
 
     # =====================
     # Task Flow
