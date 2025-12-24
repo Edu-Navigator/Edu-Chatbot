@@ -1,8 +1,8 @@
 from airflow import DAG
 from airflow.decorators import task
-from airflow.exceptions import AirflowSkipException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from datetime import datetime
+from airflow.exceptions import AirflowSkipException
+from datetime import datetime, date
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -10,25 +10,19 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 
 
-# =====================
-# DAG 설정
-# =====================
 with DAG(
-    dag_id="gg_lifelong_learning",
-    start_date=datetime(2024, 1, 1),
+    dag_id="gg_learning",
+    start_date=datetime(2025, 1, 1),
     schedule="@daily",
     catchup=False,
     tags=["gg", "selenium", "crawl"],
 ) as dag:
 
-    # =====================
-    # 1️⃣ 웹 수정 여부 체크
-    # =====================
+    # 웹 수정일자 조회
     @task
-    def check_gg_updated():
+    def get_web_updated_date() -> date:
         url = (
             "https://data.gg.go.kr/portal/data/service/selectServicePage.do"
             "?infId=Q318MFGTWD8D0Q36X8H112883673&infSeq=3"
@@ -39,96 +33,137 @@ with DAG(
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
 
-        driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
-            options=options,
-        )
-
-        driver.get(url)
-
-        wait = WebDriverWait(driver, 20)
-        th = wait.until(
-            EC.presence_of_element_located(
-                (By.XPATH, "//th[contains(text(), '최종 수정일자')]")
+        driver = None
+        try:
+            driver = webdriver.Chrome(
+                service=Service("/usr/bin/chromedriver"), 
+                options=options,
             )
-        )
+            driver.get(url)
 
-        web_date = datetime.strptime(
-            th.find_element(By.XPATH, "./following-sibling::td").text.strip(),
-            "%Y-%m-%d",
-        ).date()
+            wait = WebDriverWait(driver, 20)
+            th = wait.until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//th[contains(text(), '최종 수정일자')]")
+                )
+            )
 
-        driver.quit()
+            web_date = datetime.strptime(
+                th.find_element(By.XPATH, "./following-sibling::td")
+                .text.strip(),
+                "%Y-%m-%d",
+            ).date()
 
-        # DB에서 마지막 수집 기준일 조회
+            return web_date
+
+        finally:
+            if driver:
+                driver.quit()
+
+
+    # DB 기준일 조회
+    @task
+    def get_db_updated_date() -> date | None:
         hook = PostgresHook(postgres_conn_id="conn_production")
-        conn = hook.get_conn()
-        cursor = conn.cursor()
+        with hook.get_conn() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT MAX(source_updated_at) FROM raw.gg_lifelong_learning"
+                )
+                result = cursor.fetchone()[0]
 
-        cursor.execute(
-            "SELECT MAX(source_updated_at) FROM raw.gg_lifelong_learning"
-        )
-        db_date = cursor.fetchone()[0]
+        if result:
+            return result.date()
+        return None
 
-        cursor.close()
-        conn.close()
-
-        print(f"[웹] 수정일자: {web_date}, [DB] 기준일자: {db_date}")
+    # 최신성 판단 (Branch)
+    @task.branch
+    def branch_if_updated(web_date: date, db_date: date | None) -> str:
+        print(f"[웹] {web_date}, [DB] {db_date}")
 
         if db_date is not None and web_date <= db_date:
-            raise AirflowSkipException("변경 없음 → 수집 생략")
+            return "skip_task"
 
-        return str(web_date)
+        return "gg_crawl_task"
 
-    # =====================
-    # 2️⃣ 데이터 수집
-    # =====================
+    # 수집 Skip Task
     @task
-    def gg_crawl_task(source_updated_at: str) -> str:
-        """
-        실제 구현에서는
-        - API 호출
-        - CSV 저장
-        - 경로 반환
-        """
-        csv_path = f"/opt/airflow/data/gg_lifelong_learning_{source_updated_at}.csv"
+    def skip_task():
+        raise AirflowSkipException("변경 없음: 수집 생략")
+
+    # 데이터 수집
+    @task
+    def gg_crawl_task(web_date: date) -> str:
+        csv_path = f"/tmp/gg_lifelong_learning_{web_date}.csv"
         print(f"CSV 생성: {csv_path}")
+
+        # TODO: 실제 크롤링 로직
         return csv_path
-
-    # =====================
-    # 3️⃣ DB 적재
-    # =====================
+    
+    # DB 적재
     @task
-    def gg_load_task(csv_path: str, source_updated_at: str):
+    def gg_load_task(csv_path: str, web_date: date):
         hook = PostgresHook(postgres_conn_id="conn_production")
-        conn = hook.get_conn()
-        cursor = conn.cursor()
 
-        """
-        예시 INSERT
-        실제로는 COPY 또는 executemany 사용 추천
-        """
-        cursor.execute(
-            """
-            INSERT INTO raw.gg_lifelong_learning (
-                col1,
-                col2,
-                source_updated_at
+        copy_sql = """
+            COPY raw.gg_lifelong_learning (
+                lctr_nm,
+                lctr_bgn,
+                lctr_end,
+                lctr_bgn_time,
+                lctr_end_time,
+                lctr_content,
+                lctr_target,
+                lctr_way,
+                lctr_day,
+                lctr_locate,
+                lctr_pcsp,
+                lctr_price,
+                lctr_address,
+                lctr_operate,
+                operate_telephone,
+                aply_bgn,
+                aply_end,
+                aply_way,
+                select_way,
+                aply_url,
+                notuse1,
+                notuse2,
+                notuse3,
+                notuse4
             )
-            VALUES (%s, %s, %s)
-            """,
-            ("value1", "value2", source_updated_at),
-        )
+            FROM STDIN
+            WITH (FORMAT csv, HEADER true)
+        """
 
-        conn.commit()
-        cursor.close()
-        conn.close()
+        with hook.get_conn() as conn:
+            with conn.cursor() as cursor:
+                with open(csv_path, "r") as f:
+                    cursor.copy_expert(copy_sql, f)
 
-        print("DB 적재 완료")
+                # source_updated_at 업데이트
+                cursor.execute(
+                    """
+                    UPDATE raw.gg_lifelong_learning
+                    SET source_updated_at = %s
+                    WHERE source_updated_at IS NULL
+                    """,
+                    (web_date,),
+                )
+
+            conn.commit()
+
 
     # =====================
     # Task Flow
     # =====================
-    web_date = check_gg_updated()
+    web_date = get_web_updated_date()
+    db_date = get_db_updated_date()
+
+    branch = branch_if_updated(web_date, db_date)
+
     csv_path = gg_crawl_task(web_date)
-    gg_load_task(csv_path, web_date)
+    load = gg_load_task(csv_path, web_date)
+
+    branch >> skip_task()
+    branch >> csv_path
