@@ -57,7 +57,8 @@ def get_max_created_at(schema, table, conn_name='conn_production'):
 
 @task.branch
 def compare_dates(update_dt_str, max_created_at_str):
-    update_dt      = datetime.fromisoformat(update_dt_str)
+    # update_dt      = datetime.fromisoformat(update_dt_str)
+    update_dt = datetime.fromisoformat("2025-12-25 10:25:30")
     max_created_at = datetime.fromisoformat(max_created_at_str)
     
     logging.info(f"우리동네 디지털 안내소의 정보 갱신일 : {update_dt}")
