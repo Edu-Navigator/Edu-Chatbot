@@ -30,6 +30,25 @@ USE_GEO_KEYS = [
 
 @task
 def api_digi_learning_loc(**context):
+    """
+    운영중인 디지털 배움터 장소 정보를 수집.
+
+    공공API의 디지털 배움터 현황 데이터를 요청하고
+    한글로된 컬럼명을 영문으로 변환하여 반환한다.
+
+    Returns
+    -------
+    dict
+        디지털 배움터 위치 및 부가 정보
+        downstream task에서 입력으로 사용된다.
+
+    Notes
+    -----
+    - 입력 데이터
+        - 공공API의 디지털 배움터 현황
+    - 처리 로직
+        - 한문 컬럼명을 영문으로 변환한다.
+    """
     base_url = "https://api.odcloud.kr/api/15134509/v1"
     get_url  = "/uddi:7172b895-8193-44c1-a3c7-c52322104653"
 
@@ -53,7 +72,36 @@ def api_digi_learning_loc(**context):
     return df.to_dict('records')
 
 @task
-def et_urdn_location(csv_key,bucket,conn_name='s3_conn', **context):
+def et_urdn_location(csv_key, bucket, conn_name='s3_conn', **context):
+    """
+    s3에 csv로 저장된 데이터 로드 및 전처리
+
+    우리동네 디지털 안내소의 정보를 s3에서 로드하고
+    적재할 테이블의 컬럼명에 맞게 수정한다.
+
+    Parameters
+    ----------
+    csv_key : str
+        s3에 저장된 csv 
+    bucket : str
+        데이터 적재용 s3 버킷명
+    conn_name : str
+        Airflow Connection에 등록된 s3 연결명
+        
+    Returns
+    -------
+    dict
+        우리동네 디지털 안내소 위치 정보
+        downstream task에서 입력으로 사용된다.
+
+    Notes
+    -----
+    - 입력 데이터
+        - s3에 저장된 csv 파일을 사용한다
+    - 처리 로직
+        - cot_conts_name에 '삭제'라는 단어가 포함된 경우 제외한다.
+        - 컬럼명을 table에 맞게 매핑한다.
+    """
     df = load_csv(bucket=bucket, key=csv_key, aws_conn_id=conn_name)
     logger.info(f"{df.head()}")
     
@@ -71,6 +119,34 @@ def et_urdn_location(csv_key,bucket,conn_name='s3_conn', **context):
 
 @task
 def get_details_location(schema, table, conn_name="conn_production", **context):
+    """
+    우리동네 디지털 안내소 주소의 경도, 위도 정보 탐색
+
+    주소의 상세 정보를 카카오맵 API를 활용해 조회하고,
+    도로명 주소 기준 지역명, 경도, 위도 정보를 추가한다.
+
+    Parameters
+    ----------
+    schema : str
+        input 데이터 schema 명
+    table : str
+        input 데이터 table 명
+    conn_name : str
+        Airflow Connections에 등록된 Postgres 연결명
+    
+    Returns
+    -------
+    dict
+        downstream task에서 입력으로 사용된다.
+
+    Notes
+    -----
+    - 입력 데이터
+        - DB에 저장된 테이블을 로드한다.
+    - 처리 로직
+        - 카카오맵 API를 사용해 주소의 좌표 정보 조회
+        - 도로명 주소의 값 사용
+    """
     hook = PostgresHook(postgres_conn_id=conn_name)
     df = hook.get_pandas_df(f"SELECT * FROM {schema}.{table};")
     df.columns = [c.upper() for c in df.columns]

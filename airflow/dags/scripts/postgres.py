@@ -10,6 +10,21 @@ logger.setLevel(logging.INFO)
 
 @task    
 def table_full_refresh(data, schema, table, conn_name="conn_production", **context):
+    """
+    타켓 테이블에 데이터를 full refresh 방식으로 적재한다.
+
+    Parameters
+    ----------
+    data : str, list
+        적재할 데이터가 저장된 경로(str) 또는 list
+    schema : str
+        적재 대상 schema 명
+    table : str
+        적재 대상 table 명
+    conn_name : str
+        default='conn_production'
+        Airflow Connections에 등록된 Postgres 연결명
+    """
     if isinstance(data, str):
         # local 경로값인 경우
         df = pd.read_csv(data)
