@@ -67,7 +67,7 @@ def compare_dates(update_dt_str, max_created_at_str):
     # 수행할 task_id를 return 한다.
     if update_dt > max_created_at:
         print("데이터 업데이트 필요!")
-        return 'gg_api_path'
+        return 'gg_crawl_task'
     else:
         print("데이터 최신 상태")
         return 'skip_task'
