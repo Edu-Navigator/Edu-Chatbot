@@ -73,7 +73,7 @@ def compare_dates(update_dt_str, max_created_at_str):
         return 'skip_task'
 
 @task
-def gg_crawl_task(web_date):
+def gg_crawl_task():
     """
     경기도 평생학습 강좌 정보를 OpenAPI를 통해 수집하여 CSV 파일로 저장한다.
 
