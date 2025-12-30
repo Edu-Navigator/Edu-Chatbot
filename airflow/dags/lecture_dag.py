@@ -38,9 +38,19 @@ with DAG(
         execution_date_fn=lambda dt: dt - timedelta(minutes=20),
     )
 
-    wait_suji_gg_pipeline = ExternalTaskSensor(
-        task_id="wait_01_suji_gg_pipeline",
-        external_dag_id="01_suji_gg_pipeline",
+    wait_suji_pipeline = ExternalTaskSensor(
+        task_id="wait_01_suji_pipeline",
+        external_dag_id="01_suji_pipeline",
+        external_task_id=None,
+        mode="reschedule",
+        poke_interval=60,
+        timeout=60 * 30,
+        execution_date_fn=lambda dt: dt - timedelta(minutes=10),
+    )
+    
+    wait_gg_pipeline = ExternalTaskSensor(
+        task_id="wait_01_gg_pipeline",
+        external_dag_id="01_gg_pipeline",
         external_task_id=None,
         mode="reschedule",
         poke_interval=60,
@@ -94,7 +104,8 @@ with DAG(
             wait_crawling_images,
             wait_etl_locations,
             wait_digital_learning,
-            wait_suji_gg_pipeline,
+            wait_suji_pipeline,
+            wait_gg_pipeline,
         ] >> t
 
     # lecture DAG 내부 의존성
