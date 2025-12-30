@@ -1,0 +1,172 @@
+name: Airflow DAG CI/CD
+
+on:
+  push:
+    branches: [ main, 'feature/**' ]
+
+jobs:
+  dag-test:
+    # feature 브랜치에서만 CI 테스트 실행
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Ruff
+        run: |
+          pip install ruff
+
+      - name: Run Ruff lint
+        continue-on-error: true
+        run: |
+          ruff check .
+
+      - name: Run Ruff format check
+        continue-on-error: true
+        run: |
+          ruff format --check .
+
+      - name: Run Airflow DAG import test
+        run: |
+          docker compose -f docker-compose.ci.yml up \
+            --build \
+            --abort-on-container-exit \
+            --exit-code-from airflow-test
+
+      - name: Show Docker logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker-compose.ci.yml logs
+
+  # main 브랜치에 push될 때만 배포
+  deploy-to-s3:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+
+    - name: Sync to S3
+      run: |
+        # DAGs만 업로드
+        aws s3 sync ./airflow/dags/ s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
+          --exclude ".git/*" \
+          --exclude ".github/*" \
+          --exclude "*.md" \
+          --exclude "docker-compose*.yml" \
+          --exclude "Dockerfile" \
+          --exclude "*.pyc" \
+          --exclude "__pycache__/*" \
+          --delete
+        echo "✅ S3 업로드 완료"
+    
+  deploy-to-main:
+    needs: deploy-to-s3
+    runs-on: [self-hosted, airflow-main]
+    
+    steps:
+    - name: Clean pycache
+      run: |
+        sudo find /home/ubuntu/airflow/dags -type d -name "__pycache__" -exec rm -rf {} +
+
+    - name: Sync DAGs from S3
+      run: |
+        echo "🚀 Airflow Main 배포 시작..."
+        aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
+          /home/ubuntu/airflow/dags/ \
+          --delete \
+          --exclude "__pycache__/*" \
+          --exclude "**/__pycache__/*" \
+          --exclude "*.pyc"
+        echo "✅ DAGs 동기화 완료"
+
+    - name: Restart Airflow (manual)
+      run: |
+        echo "🔄 Airflow processes 재시작중..."
+
+        pkill -f "airflow webserver" || true
+        pkill -f "airflow scheduler" || true
+        pkill -f "airflow triggerer" || true
+
+        sleep 3
+
+        nohup /home/airflow/.local/bin/airflow scheduler > ~/airflow-scheduler.log 2>&1 &
+        nohup /home/airflow/.local/bin/airflow webserver > ~/airflow-webserver.log 2>&1 &
+        nohup /home/airflow/.local/bin/airflow triggerer > ~/airflow-triggerer.log 2>&1 &
+
+        echo "✅ Airflow Main 배포 완료"
+
+
+  # Self-hosted runner로 Worker 서버 배포
+  deploy-to-worker:
+    needs: deploy-to-main
+    runs-on: [self-hosted, airflow-worker]
+
+    steps:
+    
+    - name: Clean pycache
+      run: |
+        sudo find /home/ubuntu/airflow/dags -type d -name "__pycache__" -exec rm -rf {} +
+
+    - name: Sync DAGs from S3
+      run: |
+        echo "🚀 Airflow Worker 배포 시작..."
+        
+        # S3에서 DAGs 동기화
+        aws s3 sync s3://${{ vars.S3_BUCKET_NAME }}/airflow/dags/ \
+          /home/ubuntu/airflow/dags/ \
+        --delete \
+        --exclude "__pycache__/*" \
+        --exclude "**/__pycache__/*" \
+        --exclude "*.pyc"
+      
+        echo "✅ DAGs 동기화 완료"
+    
+    - name: Restart Airflow (manual)
+      run: |
+        echo "🔄 Airflow processes 재시작중..."
+
+        pkill -f "airflow webserver" || true
+        pkill -f "airflow scheduler" || true
+        pkill -f "airflow triggerer" || true
+
+        sleep 3
+
+        nohup /home/airflow/.local/bin/airflow scheduler > ~/airflow-scheduler.log 2>&1 &
+        nohup /home/airflow/.local/bin/airflow webserver > ~/airflow-webserver.log 2>&1 &
+        nohup /home/airflow/.local/bin/airflow triggerer > ~/airflow-triggerer.log 2>&1 &
+
+        echo "✅ Airflow 배포 완료"
+
+
+  # 배포 완료 알림
+  notify-deployment:
+    needs: [deploy-to-main, deploy-to-worker]
+    if: success()
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deployment Success
+      run: |
+        echo "🎉 배포 완료!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📦 S3 Bucket: ${{ vars.S3_BUCKET_NAME }}"
+        echo "🖥️  Airflow Main: team7-airflow-main"
+        echo "⚙️  Airflow Worker: team7-airflow-worker"
+        echo "🕐 Deployed at: $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
