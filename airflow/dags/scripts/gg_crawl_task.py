@@ -2,7 +2,75 @@ from airflow.decorators import task
 import pandas as pd
 import requests
 import math
+from datetime import datetime
 from airflow.models import Variable
+
+from airflow.decorators import task
+from utils.webdriver import get_driver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+
+@task
+def get_web_updated_date():
+    url = (
+        "https://data.gg.go.kr/portal/data/service/selectServicePage.do"
+        "?infId=Q318MFGTWD8D0Q36X8H112883673&infSeq=3"
+    )
+    driver = None
+    try:
+        driver = get_driver()
+        driver.get(url)
+
+        wait = WebDriverWait(driver, 20)
+        th = wait.until(
+            EC.presence_of_element_located(
+                (By.XPATH, "//th[contains(text(), '최종 수정일자')]")
+            )
+        )
+
+        update_date_str = th.find_element(By.XPATH, "./following-sibling::td").text
+        print(f"URL의 정보갱신일: {update_date_str}")
+
+        return update_date_str # "%Y-%m-%d"
+
+    finally:
+        if driver:
+            driver.quit()
+
+@task
+def get_max_created_at() :
+    hook = PostgresHook(postgres_conn_id='conn_production')
+    result = hook.get_first(f"""
+        SELECT MAX(created_at) as max_created_at
+        FROM raw_data.gg_learning
+    """)
+        
+    max_created_at  = result[0]
+    max_created_str = (
+        max_created_at
+        .astimezone()
+        .strftime("%Y-%m-%d")
+    )
+    print(f"raw_data.gg_learning 의 MAX(created_at) : {max_created_str}")
+    return max_created_str
+
+@task.branch
+def compare_dates(update_dt_str, max_created_at_str):
+    update_dt      = datetime.fromisoformat(update_dt_str)
+    max_created_at = datetime.fromisoformat(max_created_at_str)
+    
+    print(f"우리동네 디지털 안내소의 정보 갱신일 : {update_dt}")
+    print(f"대상 테이블의 Max created_at: {max_created_at}")
+    
+    # 수행할 task_id를 return 한다.
+    if update_dt > max_created_at:
+        print("데이터 업데이트 필요!")
+        return 'gg_api_path'
+    else:
+        print("데이터 최신 상태")
+        return 'skip_task'
 
 @task
 def gg_crawl_task():
