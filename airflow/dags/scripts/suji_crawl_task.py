@@ -8,6 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import pandas as pd
 from airflow.models import Variable
+from utils.webdriver import get_driver
 
 @task
 def suji_crawl_task():
@@ -49,18 +50,18 @@ def suji_crawl_task():
 
     url = "https://www.sujigu.go.kr/lmth/07_itedu01_connect_01.asp"
 
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
+    # chrome_options = Options()
+    # chrome_options.add_argument("--headless")
+    # chrome_options.add_argument("--no-sandbox")
+    # chrome_options.add_argument("--disable-dev-shm-usage")
 
     driver = None
     records = []
 
     try:
-        driver = webdriver.Chrome(options=chrome_options)
+        driver = get_driver()
         driver.get(url)
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 20)
 
         def parse_detail_page(link):
             """
