@@ -1,0 +1,230 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dags.scripts.modeling_prophet module &mdash; Digital Edu Chatbot 1.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=25ffd669"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/translations.js?v=afa94a99"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="genindex.html" />
+    <link rel="search" title="검색" href="search.html" />
+    <link rel="next" title="dags.scripts.postgres module" href="dags.scripts.postgres.html" />
+    <link rel="prev" title="dags.scripts.lecture_task module" href="dags.scripts.lecture_task.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Digital Edu Chatbot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">dags</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="dags.html">dags namespace</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="dags.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="dags.common.html">dags.common namespace</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="dags.scripts.html">dags.scripts namespace</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.utils.html">dags.utils namespace</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="dags.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Digital Edu Chatbot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">dags</a></li>
+          <li class="breadcrumb-item"><a href="dags.html">dags namespace</a></li>
+          <li class="breadcrumb-item"><a href="dags.scripts.html">dags.scripts namespace</a></li>
+      <li class="breadcrumb-item active">dags.scripts.modeling_prophet module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/dags.scripts.modeling_prophet.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-dags.scripts.modeling_prophet">
+<span id="dags-scripts-modeling-prophet-module"></span><h1>dags.scripts.modeling_prophet module<a class="headerlink" href="#module-dags.scripts.modeling_prophet" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="dags.scripts.modeling_prophet.check_latest_model_exists">
+<span class="sig-prename descclassname"><span class="pre">dags.scripts.modeling_prophet.</span></span><span class="sig-name descname"><span class="pre">check_latest_model_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conn_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'aws_default'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dags/scripts/modeling_prophet.html#check_latest_model_exists"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#dags.scripts.modeling_prophet.check_latest_model_exists" title="Link to this definition"></a></dt>
+<dd><p>pkl 파일 존재 확인</p>
+<p>ShortCircuitOperator와 사용되는 함수로
+S3 latest 경로에 pkl 모델이 하나라도 있는지 확인한다.</p>
+<dl class="field-list simple">
+<dt class="field-odd">매개변수<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bucket</strong> (<em>str</em>) – 탐색할 s3 버킷명</p></li>
+<li><p><strong>prefix</strong> (<em>str</em>) – 탐색할 s3 경로명</p></li>
+<li><p><strong>conn_name</strong> (<em>str</em>) – default = ‘aws_default’
+Airflow Connections에 등록된 s3 연결명</p></li>
+</ul>
+</dd>
+<dt class="field-even">반환<span class="colon">:</span></dt>
+<dd class="field-even"><p>False이면 downstream task를 skip한다.</p>
+</dd>
+<dt class="field-odd">반환 형식<span class="colon">:</span></dt>
+<dd class="field-odd"><p>boolean</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dags.scripts.modeling_prophet.get_group_values">
+<span class="sig-prename descclassname"><span class="pre">dags.scripts.modeling_prophet.</span></span><span class="sig-name descname"><span class="pre">get_group_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grp_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dags/scripts/modeling_prophet.html#get_group_values"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#dags.scripts.modeling_prophet.get_group_values" title="Link to this definition"></a></dt>
+<dd><p>그룹명 분할</p>
+<p>‘__’로 구분된 각 그룹명 구성 요소를 추출한다.
+‘_’로 치환된 띄워쓰기를 원복시킨다.</p>
+<dl class="field-list simple">
+<dt class="field-odd">매개변수<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>grp_name</strong> (<em>str</em>) – 모델 그룹명</p>
+</dd>
+<dt class="field-even">반환<span class="colon">:</span></dt>
+<dd class="field-even"><p>그룹명을 구성하던 지역 및 교육구분 정보</p>
+</dd>
+<dt class="field-odd">반환 형식<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dags.scripts.modeling_prophet.make_group_id">
+<span class="sig-prename descclassname"><span class="pre">dags.scripts.modeling_prophet.</span></span><span class="sig-name descname"><span class="pre">make_group_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lc_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lc_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lctr_category</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dags/scripts/modeling_prophet.html#make_group_id"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#dags.scripts.modeling_prophet.make_group_id" title="Link to this definition"></a></dt>
+<dd><p>모델명 저장시 사용할 그룹명 생성</p>
+<p>전처리된 각 문자열을 사용해 그룹명을 생성한다</p>
+<dl class="field-list simple">
+<dt class="field-odd">매개변수<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lc_1</strong> (<em>str</em>) – 지역(도, 시)</p></li>
+<li><p><strong>lc_2</strong> (<em>str</em>) – 지역(시, 구)</p></li>
+<li><p><strong>lctr_category</strong> (<em>str</em>) – 교육 구분</p></li>
+</ul>
+</dd>
+<dt class="field-even">반환<span class="colon">:</span></dt>
+<dd class="field-even"><p>구분자가 포함된 그룹명</p>
+</dd>
+<dt class="field-odd">반환 형식<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dags.scripts.modeling_prophet.make_train_data">
+<span class="sig-prename descclassname"><span class="pre">dags.scripts.modeling_prophet.</span></span><span class="sig-name descname"><span class="pre">make_train_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">today</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dags/scripts/modeling_prophet.html#make_train_data"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#dags.scripts.modeling_prophet.make_train_data" title="Link to this definition"></a></dt>
+<dd><p>prophet 모델 훈련데이터 생성</p>
+<p>현 그룹의 최초 데이터 발생 시점부터 현재(dag 수행일)전 까지 시점 생성
+각 시점별 시작된 강의 수를 y값으로 사용(강의가 없다면 0)</p>
+<dl class="field-list simple">
+<dt class="field-odd">매개변수<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>pd.DataFrame</em>) – 현재 그룹의 input 데이터</p></li>
+<li><p><strong>row</strong> (<em>pd.Series</em>) – 현재 그룹에 대한 통계 정보</p></li>
+<li><p><strong>today</strong> (<em>str</em>) – 모델링 시점 일자</p></li>
+</ul>
+</dd>
+<dt class="field-even">반환<span class="colon">:</span></dt>
+<dd class="field-even"><p>현 그룹의 훈련데이터(ds, y)</p>
+</dd>
+<dt class="field-odd">반환 형식<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dags.scripts.modeling_prophet.normalize">
+<span class="sig-prename descclassname"><span class="pre">dags.scripts.modeling_prophet.</span></span><span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/dags/scripts/modeling_prophet.html#normalize"><span class="viewcode-link"><span class="pre">[소스]</span></span></a><a class="headerlink" href="#dags.scripts.modeling_prophet.normalize" title="Link to this definition"></a></dt>
+<dd><p>그룹명 생성시 사용되는 문자열 표준화</p>
+<dl class="field-list simple">
+<dt class="field-odd">매개변수<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>text</strong> (<em>str</em>) – 그룹 텍스트</p>
+</dd>
+<dt class="field-even">반환<span class="colon">:</span></dt>
+<dd class="field-even"><p>공백 처리된 문자열</p>
+</dd>
+<dt class="field-odd">반환 형식<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dags.scripts.lecture_task.html" class="btn btn-neutral float-left" title="dags.scripts.lecture_task module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="dags.scripts.postgres.html" class="btn btn-neutral float-right" title="dags.scripts.postgres module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Team 7.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,183 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dags.train_prophet_dag module &mdash; Digital Edu Chatbot 1.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=25ffd669"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/translations.js?v=afa94a99"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="genindex.html" />
+    <link rel="search" title="검색" href="search.html" />
+    <link rel="next" title="dags.urdn_freshness_check module" href="dags.urdn_freshness_check.html" />
+    <link rel="prev" title="dags.suji_dag module" href="dags.suji_dag.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Digital Edu Chatbot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">dags</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="dags.html">dags namespace</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="dags.html#subpackages">Subpackages</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="dags.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="dags.cd_test.html">dags.cd_test module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.chromedriver_test.html">dags.chromedriver_test module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.craw_images_digilearning_loc.html">dags.craw_images_digilearning_loc module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.digital_learning_ci.html">dags.digital_learning_ci module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.digital_learning_modified.html">dags.digital_learning_modified module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.etl_locations.html">dags.etl_locations module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.forecast_prophet_dag.html">dags.forecast_prophet_dag module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.gg_dag.html">dags.gg_dag module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.lecture_dag.html">dags.lecture_dag module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.suji_dag.html">dags.suji_dag module</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">dags.train_prophet_dag module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="dags.urdn_freshness_check.html">dags.urdn_freshness_check module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Digital Edu Chatbot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">dags</a></li>
+          <li class="breadcrumb-item"><a href="dags.html">dags namespace</a></li>
+      <li class="breadcrumb-item active">dags.train_prophet_dag module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/dags.train_prophet_dag.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-dags.train_prophet_dag">
+<span id="dags-train-prophet-dag-module"></span><h1>dags.train_prophet_dag module<a class="headerlink" href="#module-dags.train_prophet_dag" title="Link to this heading"></a></h1>
+<p>과거 교육 시작 일자를 기반으로 prophet 모델을 훈련하고 S3에 pkl파일로 저장한다.</p>
+<p>이 DAG는 지역, 교육구분별로 모델링을 수행합니다.
+그룹의 강의 시작일별 강의 건수를 사용하여 훈련 데이터를 생성하고,
+훈련된 모델을 S3에 저장합니다.</p>
+<dl class="field-list simple">
+<dt class="field-odd">param schedule_interval<span class="colon">:</span></dt>
+<dd class="field-odd"><p>매주 월요일 오전 10시 30분 (‘30 10 * * 1’)</p>
+</dd>
+<dt class="field-even">type schedule_interval<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">param start_date<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Starting date for the DAG (2025-12-01)</p>
+</dd>
+<dt class="field-even">type start_date<span class="colon">:</span></dt>
+<dd class="field-even"><p>datetime</p>
+</dd>
+<dt class="field-odd">param catchup<span class="colon">:</span></dt>
+<dd class="field-odd"><p>False to prevent backfilling historical runs</p>
+</dd>
+<dt class="field-even">type catchup<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+<dt class="field-odd">param tags<span class="colon">:</span></dt>
+<dd class="field-odd"><p>[“03”, “train”, “prophet”]</p>
+</dd>
+<dt class="field-even">type tags<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of str</p>
+</dd>
+<dt class="field-odd">param Tasks<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+<dt class="field-even">param —–<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+<dt class="field-odd">param train_prophet_models<span class="colon">:</span></dt>
+<dd class="field-odd"><p>훈련데이터를 생성 및 모델 훈련</p>
+</dd>
+<dt class="field-even">param Dependencies<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+<dt class="field-odd">param ————<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+<dt class="field-even">param train_prophet_models<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">더 보기</p>
+<dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">forecast_prophet_dag</span></code></dt><dd><p>prophet 예측 DAG</p>
+</dd>
+</dl>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="dags.suji_dag.html" class="btn btn-neutral float-left" title="dags.suji_dag module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="dags.urdn_freshness_check.html" class="btn btn-neutral float-right" title="dags.urdn_freshness_check module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Team 7.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

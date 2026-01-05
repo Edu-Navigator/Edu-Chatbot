@@ -1,0 +1,508 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dags.utils.lecture_process_func &mdash; Digital Edu Chatbot 1.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=25ffd669"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/translations.js?v=afa94a99"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="../../../genindex.html" />
+    <link rel="search" title="검색" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Digital Edu Chatbot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">dags</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Digital Edu Chatbot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">모듈 코드</a></li>
+      <li class="breadcrumb-item active">dags.utils.lecture_process_func</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>dags.utils.lecture_process_func의 소스 코드</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">airflow.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Variable</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">date</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">utils.lecture_common_func</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">filter_data</span><span class="p">,</span>
+    <span class="n">map_and_explode_categories</span><span class="p">,</span>
+    <span class="n">parse_dl_nm_and_address</span><span class="p">,</span>
+    <span class="n">fetch_road_address</span><span class="p">,</span>
+    <span class="n">resolve_lc_and_coord</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="process_suji">
+<a class="viewcode-back" href="../../../dags.utils.lecture_process_func.html#dags.utils.lecture_process_func.process_suji">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_suji</span><span class="p">(</span><span class="n">df_raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    수지구청 평생학습 크롤링 데이터를 LECTURE 테이블 스키마에 맞게 변환한다.</span>
+
+<span class="sd">    원본 DataFrame을 기반으로 공통 필터링 및 카테고리 매핑 로직을 적용하여 </span>
+<span class="sd">    최종 LECTURE 형식의 DataFrame을 반환한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df_raw : pandas.DataFrame</span>
+<span class="sd">        수지구청 평생학습 크롤링 결과 원본 데이터프레임.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        LECTURE 테이블 컬럼 구조에 맞게 변환된 데이터프레임.</span>
+<span class="sd">        입력 데이터가 비어 있는 경우 빈 DataFrame을 반환한다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    KeyError</span>
+<span class="sd">        필수 컬럼인 `lctr_nm`이 입력 데이터프레임에 존재하지 않으면</span>
+<span class="sd">        카테고리 매핑 및 필터링 과정에서 오류가 발생할 수 있다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">df_raw</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    
+    
+    <span class="c1"># [1단계] Raw 데이터 파싱 (LECTURE 스키마의 임시 DataFrame 구성)</span>
+    <span class="n">temp_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">df_raw</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="c1"># 1. APLY_URL</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_URL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;APLY_URL&#39;</span><span class="p">]</span>
+
+    <span class="c1"># 2. LCTR_WAY (고정값: 오프라인)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_WAY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;오프라인&#39;</span>
+
+    <span class="c1"># 3. LCTR_CATEGORY (초기 NULL 처리 - 공통 함수에서 채워짐)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_CATEGORY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># 4. LCTR_NM</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span>
+
+    <span class="c1"># 5. APLY_WAY (고정값: 온라인)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_WAY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;온라인&#39;</span>
+    
+    <span class="c1"># 6. APLY_BGN_END 파싱</span>
+    <span class="n">apply_bgn_str</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;APLY_BGN_END&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">apply_end_str</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;APLY_BGN_END&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    
+    <span class="c1"># 6-1. APLY_BGN (날짜만)</span>
+    <span class="n">apply_bgn_date_only</span> <span class="o">=</span> <span class="n">apply_bgn_str</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_BGN&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">apply_bgn_date_only</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    <span class="c1"># 6-2. APLY_END (날짜만)</span>
+    <span class="n">apply_end_date_only</span> <span class="o">=</span> <span class="n">apply_end_str</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_END&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">apply_end_date_only</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 7. LCTR_BGN_END 파싱</span>
+    <span class="n">lctr_bgn_str</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_BGN_END&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">lctr_end_str</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_BGN_END&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># 7-1. LCTR_BGN (날짜만)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_BGN&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">lctr_bgn_str</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    <span class="c1"># 7-2. LCTR_END (날짜만)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_END&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">lctr_end_str</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># 8. LCTR_CONTENT (강의명 재사용)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_CONTENT&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># 9. PCSP (정원 24로 고정)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;PCSP&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">24</span>
+    
+    <span class="c1"># 10. IS_APLY_AVL</span>
+    <span class="n">current_date</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">())</span> 
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;IS_APLY_AVL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_END&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">())</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_END&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">current_date</span><span class="p">)</span>
+    
+    <span class="c1"># 11. 주소 및 장소 관련 데이터 (우선 NULL 처리)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;DL_NM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_LOCATE&#39;</span><span class="p">]</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;경기도 용인시 수지구 포은대로 435 수지구청,수지보건소&#39;</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS_X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS_Y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    
+    <span class="c1"># 12. LCTR_IMAGE</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_IMAGE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    
+    <span class="c1"># [2단계] 공통 필터링 및 카테고리/ROW 분리 로직</span>
+    <span class="c1"># 1. 강의 필터링</span>
+    <span class="n">df_filtered</span> <span class="o">=</span> <span class="n">filter_data</span><span class="p">(</span><span class="n">temp_df</span><span class="p">)</span>
+    
+    <span class="c1"># 2. 카테고리 매핑 및 Row 분리 (3번 조건)</span>
+    <span class="n">df_final</span> <span class="o">=</span> <span class="n">map_and_explode_categories</span><span class="p">(</span><span class="n">df_filtered</span><span class="p">)</span>
+
+    <span class="c1"># LECTURE 테이블의 최종 컬럼 순서 조정</span>
+    <span class="n">final_columns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;APLY_URL&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_WAY&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_CATEGORY&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_NM&#39;</span><span class="p">,</span> <span class="s1">&#39;APLY_WAY&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;APLY_BGN&#39;</span><span class="p">,</span> <span class="s1">&#39;APLY_END&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_BGN&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_END&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_CONTENT&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;PCSP&#39;</span><span class="p">,</span> <span class="s1">&#39;IS_APLY_AVL&#39;</span><span class="p">,</span> <span class="s1">&#39;DL_NM&#39;</span><span class="p">,</span> <span class="s1">&#39;ADDRESS&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_1&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_2&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_3&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;ADDRESS_X&#39;</span><span class="p">,</span> <span class="s1">&#39;ADDRESS_Y&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_IMAGE&#39;</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">df_final</span><span class="p">[</span><span class="n">final_columns</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="process_gg">
+<a class="viewcode-back" href="../../../dags.utils.lecture_process_func.html#dags.utils.lecture_process_func.process_gg">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_gg</span><span class="p">(</span><span class="n">df_raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    경기도 평생학습 OpenAPI 수집 데이터를 LECTURE 테이블 스키마에 맞게 변환한다.</span>
+
+<span class="sd">    원본 DataFrame을 기반으로 공통 필터링 및 카테고리 매핑 로직을 적용하여 </span>
+<span class="sd">    최종 LECTURE 형식의 DataFrame을 반환한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df_raw : pandas.DataFrame</span>
+<span class="sd">        경기도 평생학습 OpenAPI 응답 원본 데이터프레임.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        LECTURE 테이블 컬럼 구조에 맞게 변환된 데이터프레임.</span>
+<span class="sd">        입력 데이터가 비어 있는 경우 빈 DataFrame을 반환한다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    KeyError</span>
+<span class="sd">        필수 컬럼인 `LCTR_NM`이 입력 데이터프레임에 존재하지 않으면</span>
+<span class="sd">        공통 필터링 또는 카테고리 매핑 과정에서 오류가 발생할 수 있다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">df_raw</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    
+    <span class="c1"># [1단계] Raw 데이터 파싱 (LECTURE 스키마의 임시 DataFrame 구성)</span>
+    <span class="n">temp_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">df_raw</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="c1"># 1. APLY_URL</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_URL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;APLY_URL&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># 2. LCTR_WAY (강의 방식) 매핑</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">map_lctr_way</span><span class="p">(</span><span class="n">way</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">way</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;온라인&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s1">&#39;온라인&#39;</span>
+        <span class="k">elif</span> <span class="n">way</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;오프라인&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s1">&#39;오프라인&#39;</span>
+        <span class="k">elif</span> <span class="n">way</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;온라인+오프라인&#39;</span><span class="p">,</span> <span class="s1">&#39;혼합&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s1">&#39;혼합&#39;</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="c1"># 매핑되지 않는 경우</span>
+        
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_WAY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_WAY&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">map_lctr_way</span><span class="p">)</span>
+    
+    <span class="c1"># 3. LCTR_CATEGORY (초기 NULL 처리 - 공통 함수에서 채워짐)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_CATEGORY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    
+    <span class="c1"># 4. LCTR_NM</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># 5. APLY_WAY (신청 방식) 매핑</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">map_aply_way</span><span class="p">(</span><span class="n">way</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">way</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;인터넷&#39;</span><span class="p">,</span> <span class="s1">&#39;온라인&#39;</span><span class="p">,</span> <span class="s1">&#39;온라인접수&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s1">&#39;온라인&#39;</span>
+        <span class="k">elif</span> <span class="n">way</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;방문&#39;</span><span class="p">,</span> <span class="s1">&#39;방문접수&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s1">&#39;방문접수&#39;</span>
+        <span class="k">return</span> <span class="s1">&#39;온라인 또는 방문접수&#39;</span> <span class="c1"># 나머지</span>
+        
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_WAY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;APLY_WAY&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">map_aply_way</span><span class="p">)</span>
+    
+    <span class="c1"># 6, 7, 8, 9. 날짜 변환 (Raw 데이터는 &#39;2025-03-04&#39; 형태의 문자열)</span>
+    <span class="c1"># pd.to_datetime을 사용하여 날짜 타입으로 일괄 변환</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_BGN&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;APLY_BGN&#39;</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_END&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;APLY_END&#39;</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_BGN&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_BGN&#39;</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_END&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_END&#39;</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># 10. LCTR_CONTENT 파싱 및 변환</span>
+    <span class="c1"># &#39;&amp;amp;gt&#39; -&gt; &#39;, &#39; 변환</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_CONTENT&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_CONTENT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&amp;amp;gt&#39;</span><span class="p">,</span> <span class="s1">&#39;, &#39;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># 11. PCSP</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;PCSP&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_PCSP&#39;</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    
+    <span class="c1"># 12. IS_APLY_AVL</span>
+    <span class="n">current_date</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">())</span> 
+    <span class="c1"># APLY_END가 오늘보다 작으면 (과거면) False, 아니면 True</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;IS_APLY_AVL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_END&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">())</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_END&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">current_date</span><span class="p">)</span>
+    
+    <span class="c1"># 13. DL_NM (교육 장소/운영처) 로직</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">map_dl_nm</span><span class="p">(</span><span class="n">operate</span><span class="p">,</span> <span class="n">locate</span><span class="p">):</span>
+        <span class="n">operate</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">operate</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">locate</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">locate</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="c1"># 1) LCTR_OPERATE == LCTR_LOCATE</span>
+        <span class="k">if</span> <span class="n">operate</span> <span class="o">==</span> <span class="n">locate</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">locate</span>
+        <span class="c1"># 2) LCTR_OPERATE == ‘경기도 수원시평생학습관’</span>
+        <span class="k">if</span> <span class="n">operate</span> <span class="o">==</span> <span class="s1">&#39;경기도 수원시평생학습관&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">locate</span>
+        <span class="c1"># 3) LCTR_OPERATE 앞의 3글자 == LCTR_LOCATE 앞의 3글자</span>
+        <span class="k">if</span> <span class="n">operate</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="n">locate</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">operate</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">locate</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">locate</span>
+        <span class="c1"># 4) 나머지</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">operate</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">locate</span><span class="si">}</span><span class="s2">&quot;</span>
+        
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;DL_NM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">row</span><span class="p">:</span> <span class="n">map_dl_nm</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;LCTR_OPERATE&#39;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;LCTR_LOCATE&#39;</span><span class="p">]),</span> 
+        <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># 14. [2단계]에서 주소 검색 및 좌표 변환을 위해 LCTR_OPERATE, LCTR_LOCATE 보존</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_OPERATE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_OPERATE&#39;</span><span class="p">]</span> 
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_LOCATE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_LOCATE&#39;</span><span class="p">]</span>
+
+    <span class="c1"># 15. 주소 및 장소 관련 데이터 (우선 NULL 처리)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS_X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS_Y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_IMAGE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    
+    <span class="c1"># [2단계] 공통 필터링 및 카테고리/ROW 분리 로직</span>
+    <span class="c1"># 1. 강의 필터링 (필수)</span>
+    <span class="n">df_filtered</span> <span class="o">=</span> <span class="n">filter_data</span><span class="p">(</span><span class="n">temp_df</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve_gg_address</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">JUSO_API_KEY</span> <span class="o">=</span> <span class="n">Variable</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;juso_api_key&quot;</span><span class="p">)</span>
+        <span class="n">JUSO_API_URL</span> <span class="o">=</span> <span class="s2">&quot;https://business.juso.go.kr/addrlink/addrLinkApi.do&quot;</span>
+
+        <span class="n">operate</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;LCTR_OPERATE&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">locate</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;LCTR_LOCATE&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="c1"># 1차 키워드 결정</span>
+        <span class="k">if</span> <span class="n">operate</span> <span class="o">==</span> <span class="s1">&#39;디지털배움터&#39;</span><span class="p">:</span>
+            <span class="n">primary_keyword</span> <span class="o">=</span> <span class="n">locate</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">primary_keyword</span> <span class="o">=</span> <span class="n">operate</span>
+
+        <span class="c1"># 1차 검색</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">fetch_road_address</span><span class="p">(</span><span class="n">primary_keyword</span><span class="p">,</span> <span class="n">JUSO_API_KEY</span><span class="p">,</span> <span class="n">JUSO_API_URL</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">address</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">address</span>
+
+        <span class="c1"># 2차 검색: locate 사용 (의미 없는 값 제외)</span>
+        <span class="k">if</span> <span class="n">locate</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;평생학습관&#39;</span><span class="p">,</span> <span class="s1">&#39;온라인&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="n">fetch_road_address</span><span class="p">(</span><span class="n">locate</span><span class="p">,</span> <span class="n">JUSO_API_KEY</span><span class="p">,</span> <span class="n">JUSO_API_URL</span><span class="p">)</span>
+    
+    <span class="c1"># df_filtered는 LCTR_OPERATE와 LCTR_LOCATE를 포함하므로 apply 가능</span>
+    <span class="n">df_filtered</span><span class="p">[</span><span class="s1">&#39;ADDRESS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_filtered</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">resolve_gg_address</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c1"># 2. 카테고리 매핑 및 Row 분리</span>
+    <span class="n">df_final</span> <span class="o">=</span> <span class="n">map_and_explode_categories</span><span class="p">(</span><span class="n">df_filtered</span><span class="p">)</span>
+
+    <span class="c1"># LECTURE 테이블의 최종 컬럼 순서 조정</span>
+    <span class="n">final_columns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;APLY_URL&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_WAY&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_CATEGORY&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_NM&#39;</span><span class="p">,</span> <span class="s1">&#39;APLY_WAY&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;APLY_BGN&#39;</span><span class="p">,</span> <span class="s1">&#39;APLY_END&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_BGN&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_END&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_CONTENT&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;PCSP&#39;</span><span class="p">,</span> <span class="s1">&#39;IS_APLY_AVL&#39;</span><span class="p">,</span> <span class="s1">&#39;DL_NM&#39;</span><span class="p">,</span> <span class="s1">&#39;ADDRESS&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_1&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_2&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_3&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;ADDRESS_X&#39;</span><span class="p">,</span> <span class="s1">&#39;ADDRESS_Y&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_IMAGE&#39;</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">df_final</span><span class="p">[</span><span class="n">final_columns</span><span class="p">]</span></div>
+
+
+
+<span class="c1"># def process_digi(df_raw: pd.DataFrame) -&gt; pd.DataFrame:</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     디지털 배움터 (수강신청 가능) 데이터를 LECTURE 테이블 형식에 맞게 변환 및 파싱.</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     if df_raw.empty:</span>
+<span class="c1">#         return pd.DataFrame()</span>
+    
+<span class="c1">#     return pd.DataFrame()</span>
+
+
+<div class="viewcode-block" id="process_digi_end">
+<a class="viewcode-back" href="../../../dags.utils.lecture_process_func.html#dags.utils.lecture_process_func.process_digi_end">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_digi_end</span><span class="p">(</span><span class="n">df_raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    디지털 배움터 수강 종료 데이터를 LECTURE 테이블 스키마에 맞게 변환한다.</span>
+
+<span class="sd">    원본 DataFrame을 기반으로 공통 필터링 및 카테고리 매핑 로직을 적용하여 </span>
+<span class="sd">    최종 LECTURE 형식의 DataFrame을 반환한다.</span>
+
+<span class="sd">    본 데이터는 수강 종료 강좌이므로 신청 관련 컬럼은 고정값으로 처리된다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df_raw : pandas.DataFrame</span>
+<span class="sd">        디지털 배움터 수강 종료 강좌 원본 데이터프레임.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        LECTURE 테이블 컬럼 구조에 맞게 변환된 데이터프레임.</span>
+<span class="sd">        입력 데이터가 비어 있는 경우 빈 DataFrame을 반환한다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    KeyError</span>
+<span class="sd">        필수 컬럼인 `LCTR_NM`이 입력 데이터프레임에 존재하지 않으면</span>
+<span class="sd">        공통 필터링 또는 카테고리 매핑 과정에서 오류가 발생할 수 있다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">df_raw</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+
+    <span class="c1"># [1단계] Raw 데이터 파싱 (LECTURE 스키마의 임시 DataFrame 구성)</span>
+    <span class="n">temp_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">df_raw</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="c1"># 1. APLY_URL</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_URL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;APLY_URL&#39;</span><span class="p">]</span>
+
+    <span class="c1"># 2. LCTR_WAY (강의 방식) 매핑</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">map_lctr_way</span><span class="p">(</span><span class="n">way</span><span class="p">):</span>
+        <span class="n">way</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">way</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">way</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;집합&#39;</span><span class="p">,</span> <span class="s1">&#39;에듀버스&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s1">&#39;오프라인&#39;</span>
+        <span class="k">elif</span> <span class="n">way</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;온라인&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s1">&#39;온라인&#39;</span>
+        <span class="k">return</span> <span class="kc">None</span> 
+        
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_WAY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_WAY&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">map_lctr_way</span><span class="p">)</span>
+
+    <span class="c1"># 3. LCTR_CATEGORY (초기 NULL 처리 - 공통 함수에서 채워짐)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_CATEGORY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    
+    <span class="c1"># 4. LCTR_NM</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span>
+
+    <span class="c1"># 5. APLY_WAY: &#39;온라인&#39; 고정</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_WAY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;온라인&#39;</span>
+
+    <span class="c1"># 6. APLY_BGN: NULL 고정</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_BGN&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># 7. APLY_END: NULL 고정</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;APLY_END&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># 8, 9. LCTR_BGN, LCTR_END 파싱 (예시: &#39;2025-11-17 ~ 2025-11-17 (1 일)&#39;)</span>
+    
+    <span class="c1"># &#39; ~ &#39;를 기준으로 앞 부분(시작일) 추출</span>
+    <span class="n">lctr_bgn_series</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_BGN_END&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="c1"># &#39; ~ &#39;를 기준으로 뒷 부분, 그리고 그 부분에서 &#39; (&#39; 앞 부분(종료일) 추출</span>
+    <span class="n">lctr_end_series_temp</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_BGN_END&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">lctr_end_series</span> <span class="o">=</span> <span class="n">lctr_end_series_temp</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="n">expand</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_BGN&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">lctr_bgn_series</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_END&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">lctr_end_series</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># 10. LCTR_CONTENT</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_CONTENT&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;LCTR_CONTENT&#39;</span><span class="p">]</span>
+
+    <span class="c1"># 11. PCSP: NONE 고정</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;PCSP&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># 12. IS_APLY_AVL: FALSE 고정</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;IS_APLY_AVL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># 13, 14 DL_NM, ADDRESS 추출</span>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">df_raw</span><span class="p">[</span><span class="s1">&#39;DL_NM&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">parse_dl_nm_and_address</span><span class="p">)</span>
+
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;DL_NM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    
+    <span class="c1"># 15. NULL 값 지정 컬럼</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LC_3&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS_X&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;ADDRESS_Y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">temp_df</span><span class="p">[</span><span class="s1">&#39;LCTR_IMAGE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    
+    <span class="c1"># [2단계] 공통 필터링 및 카테고리/ROW 분리 로직</span>
+    <span class="c1"># 1. 강의 필터링</span>
+    <span class="n">df_filtered</span> <span class="o">=</span> <span class="n">filter_data</span><span class="p">(</span><span class="n">temp_df</span><span class="p">)</span>
+    
+    <span class="c1"># 2. 카테고리 매핑 및 Row 분리</span>
+    <span class="n">df_final</span> <span class="o">=</span> <span class="n">map_and_explode_categories</span><span class="p">(</span><span class="n">df_filtered</span><span class="p">)</span>
+
+    <span class="c1"># LECTURE 테이블의 최종 컬럼 순서 조정</span>
+    <span class="n">final_columns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;APLY_URL&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_WAY&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_CATEGORY&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_NM&#39;</span><span class="p">,</span> <span class="s1">&#39;APLY_WAY&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;APLY_BGN&#39;</span><span class="p">,</span> <span class="s1">&#39;APLY_END&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_BGN&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_END&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_CONTENT&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;PCSP&#39;</span><span class="p">,</span> <span class="s1">&#39;IS_APLY_AVL&#39;</span><span class="p">,</span> <span class="s1">&#39;DL_NM&#39;</span><span class="p">,</span> <span class="s1">&#39;ADDRESS&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_1&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_2&#39;</span><span class="p">,</span> <span class="s1">&#39;LC_3&#39;</span><span class="p">,</span> 
+        <span class="s1">&#39;ADDRESS_X&#39;</span><span class="p">,</span> <span class="s1">&#39;ADDRESS_Y&#39;</span><span class="p">,</span> <span class="s1">&#39;LCTR_IMAGE&#39;</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">df_final</span><span class="p">[</span><span class="n">final_columns</span><span class="p">]</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Team 7.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
