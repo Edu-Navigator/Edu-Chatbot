@@ -14,6 +14,19 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 @task
 def get_web_updated_date():
+    """
+    데이터 소스 업데이트 일자 확인
+
+    타겟 URL에서 최종 수정일자를 크롤링하고,
+    문자열로 반환한다.
+
+    Returns
+    -------
+    str
+        task 실행 결과로 ""%Y-%m-%d"" 포맷이며,
+        downstream task에서 입력으로 사용된다.
+
+    """
     url = (
         "https://data.gg.go.kr/portal/data/service/selectServicePage.do"
         "?infId=Q318MFGTWD8D0Q36X8H112883673&infSeq=3"
@@ -41,6 +54,24 @@ def get_web_updated_date():
 
 @task
 def get_max_created_at() :
+    """
+    테이블의 최신 데이터 생성일자 확인
+
+    타겟 테이블에서 max(created_at)을 조회하고,
+    문자열로 반환한다.
+
+    Returns
+    -------
+    str
+        task 실행 결과로 "%Y-%m-%d" 포맷이며,
+        downstream task에서 입력으로 사용된다.
+
+    Notes
+    -----
+    - 처리 로직
+        - DB의 UTC 정보를 반영한 datetime으로 변환한다.
+        
+    """
     hook = PostgresHook(postgres_conn_id='conn_production')
     result = hook.get_first(f"""
         SELECT MAX(created_at) as max_created_at
@@ -58,6 +89,25 @@ def get_max_created_at() :
 
 @task.branch
 def compare_dates(update_dt_str, max_created_at_str):
+    """
+    일자 비교 후 결과에 따라 task명 반환
+
+    데이터 소스와 테이블의 정보 갱신일을 비교하고,
+    소스의 데이터가 업데이트 된 경우 'gg_crawl_task'을 반환하고 아니면 'end_gg_task'를 반환한다.
+
+    Parameters
+    ----------
+    update_dt_str : str
+        데이터 소스 업데이트 일자
+    max_created_at_str : str
+        테이블 업데이트 일자
+
+    Returns
+    -------
+    str
+        수행될 task_id를
+
+    """
     update_dt      = datetime.fromisoformat(update_dt_str)
     max_created_at = datetime.fromisoformat(max_created_at_str)
     
@@ -70,7 +120,7 @@ def compare_dates(update_dt_str, max_created_at_str):
         return 'gg_crawl_task'
     else:
         print("데이터 최신 상태")
-        return 'skip_task'
+        return 'end_gg_task'
 
 @task
 def gg_crawl_task():
