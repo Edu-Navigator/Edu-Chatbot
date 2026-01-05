@@ -70,7 +70,7 @@ def compare_dates(update_dt_str, max_created_at_str):
         return 'gg_crawl_task'
     else:
         print("데이터 최신 상태")
-        return 'skip_task'
+        return 'end_gg_task'
 
 @task
 def gg_crawl_task():
