@@ -1,0 +1,434 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dags.utils.lecture_common_func &mdash; Digital Edu Chatbot 1.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=25ffd669"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/translations.js?v=afa94a99"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="../../../genindex.html" />
+    <link rel="search" title="검색" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Digital Edu Chatbot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">dags</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Digital Edu Chatbot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">모듈 코드</a></li>
+      <li class="breadcrumb-item active">dags.utils.lecture_common_func</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>dags.utils.lecture_common_func의 소스 코드</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">utils.kakaomap_api</span><span class="w"> </span><span class="kn">import</span> <span class="n">fetch_geocding</span>
+<span class="c1"># from airflow.models import Variable</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;airflow.task&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="filter_data">
+<a class="viewcode-back" href="../../../dags.utils.lecture_common_func.html#dags.utils.lecture_common_func.filter_data">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">filter_data</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    강좌명(LCTR_NM)을 기준으로 스마트폰, 키오스크, 컴퓨터 관련 강좌만 필터링한다.</span>
+
+<span class="sd">    강좌명에 포함 조건 키워드가 존재하고, 제외 조건 키워드가 존재하지 않는</span>
+<span class="sd">    데이터만 선별하여 반환한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : pandas.DataFrame</span>
+<span class="sd">        강좌 정보가 포함된 원본 데이터프레임.</span>
+<span class="sd">        LCTR_NM 컬럼을 반드시 포함해야 한다.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        필터링 조건을 만족하는 행만 포함한 데이터프레임.</span>
+<span class="sd">        조건을 만족하는 데이터가 없거나 LCTR_NM 컬럼이 없으면 빈 DataFrame을 반환한다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        입력 객체가 pandas.DataFrame 타입이 아닌 경우 발생할 수 있다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="s1">&#39;LCTR_NM&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span> <span class="c1"># LCTR_NM이 없으면 빈 데이터프레임 반환</span>
+
+    <span class="n">df_temp</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">df_temp</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_temp</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&amp;amp;&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span>
+
+    <span class="n">lctr_nm_series</span> <span class="o">=</span> <span class="n">df_temp</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+
+    <span class="c1"># 1. 포함 조건: 스마트폰, 키오스크, 컴퓨터 중 하나라도 포함</span>
+    <span class="n">include_keywords</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;스마트폰&#39;</span><span class="p">,</span> <span class="s1">&#39;키오스크&#39;</span><span class="p">,</span> <span class="s1">&#39;컴퓨터&#39;</span><span class="p">]</span>
+    <span class="n">include_condition</span> <span class="o">=</span> <span class="n">lctr_nm_series</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">x</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">include_keywords</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 2. 제외 조건: 자격증, 컴퓨터활용능력, ITQ 중 하나라도 포함</span>
+    <span class="n">exclude_keywords</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;자격증&#39;</span><span class="p">,</span> <span class="s1">&#39;컴퓨터활용능력&#39;</span><span class="p">,</span> <span class="s1">&#39;ITQ&#39;</span><span class="p">]</span>
+    <span class="n">exclude_condition</span> <span class="o">=</span> <span class="n">lctr_nm_series</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">x</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">exclude_keywords</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 최종 필터링: 포함 조건은 만족, 제외 조건은 만족하지 않는 행만 선택</span>
+    <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df_temp</span><span class="p">[</span><span class="n">include_condition</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">exclude_condition</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="n">filtered_df</span></div>
+
+
+
+<div class="viewcode-block" id="map_and_explode_categories">
+<a class="viewcode-back" href="../../../dags.utils.lecture_common_func.html#dags.utils.lecture_common_func.map_and_explode_categories">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">map_and_explode_categories</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    강좌명(LCTR_NM)을 기준으로 디지털 교육 카테고리를 매핑하고 다중 카테고리를 행 단위로 분리한다.</span>
+
+<span class="sd">    강좌명에 포함된 키워드를 기반으로 카테고리를 생성한 뒤,</span>
+<span class="sd">    하나의 강좌가 여러 카테고리에 해당하는 경우 행을 복제(explode)하여</span>
+<span class="sd">    LCTR_CATEGORY 컬럼만 다른 동일한 행으로 확장한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : pandas.DataFrame</span>
+<span class="sd">        LCTR_NM 컬럼을 포함해야 한다.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        LCTR_CATEGORY 컬럼이 추가된 데이터프레임.</span>
+<span class="sd">        다중 카테고리에 해당하는 경우 행이 분리되어 반환된다.</span>
+<span class="sd">        입력 데이터프레임이 비어 있으면 원본을 그대로 반환한다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    KeyError</span>
+<span class="sd">        입력 데이터프레임에 LCTR_NM 컬럼이 존재하지 않는 경우 발생할 수 있다.</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        입력 객체가 pandas.DataFrame 타입이 아닌 경우 발생할 수 있다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">df</span>
+        
+    <span class="c1"># 1. 카테고리 매핑 로직</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_categories</span><span class="p">(</span><span class="n">lctr_nm</span><span class="p">):</span>
+        <span class="n">categories</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">lctr_nm</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">lctr_nm</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># 키오스크 매핑</span>
+        <span class="k">if</span> <span class="s1">&#39;키오스크&#39;</span> <span class="ow">in</span> <span class="n">lctr_nm</span><span class="p">:</span>
+            <span class="n">categories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;키오스크&#39;</span><span class="p">)</span>
+            
+        <span class="c1"># 컴퓨터 매핑</span>
+        <span class="k">if</span> <span class="s1">&#39;컴퓨터&#39;</span> <span class="ow">in</span> <span class="n">lctr_nm</span><span class="p">:</span>
+            <span class="n">categories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;컴퓨터&#39;</span><span class="p">)</span>
+            
+        <span class="c1"># 스마트폰 매핑</span>
+        <span class="k">if</span> <span class="s1">&#39;스마트폰&#39;</span> <span class="ow">in</span> <span class="n">lctr_nm</span><span class="p">:</span>
+            <span class="c1"># 기초, 조작, 초급 확인</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">in</span> <span class="n">lctr_nm</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;기초&#39;</span><span class="p">,</span> <span class="s1">&#39;조작&#39;</span><span class="p">,</span> <span class="s1">&#39;초급&#39;</span><span class="p">]):</span>
+                <span class="n">categories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;기초 스마트폰&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">categories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;스마트폰 활용&#39;</span><span class="p">)</span>
+                
+        <span class="c1"># 필터링은 통과했지만 카테고리 키워드 매핑에서 누락될 경우</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">categories</span><span class="p">:</span>
+            <span class="n">categories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">categories</span>
+
+    <span class="c1"># &#39;CATEGORIES&#39;라는 임시 컬럼에 각 행이 해당하는 카테고리 리스트를 저장</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;CATEGORIES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;LCTR_NM&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">get_categories</span><span class="p">)</span>
+    
+    <span class="c1"># 2. 다중 카테고리일 경우 Row 복제</span>
+    <span class="n">df_exploded</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">explode</span><span class="p">(</span><span class="s1">&#39;CATEGORIES&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># 3. 새로운 LCTR_CATEGORY 컬럼에 CATEGORIES 값을 할당하고 임시 컬럼 삭제</span>
+    <span class="n">df_exploded</span><span class="p">[</span><span class="s1">&#39;LCTR_CATEGORY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_exploded</span><span class="p">[</span><span class="s1">&#39;CATEGORIES&#39;</span><span class="p">]</span>
+    
+    <span class="c1"># 4. 카테고리가 None인 Row는 LCTR_CATEGORY가 None</span>
+    <span class="k">return</span> <span class="n">df_exploded</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;CATEGORIES&#39;</span><span class="p">])</span></div>
+
+
+
+<div class="viewcode-block" id="parse_dl_nm_and_address">
+<a class="viewcode-back" href="../../../dags.utils.lecture_common_func.html#dags.utils.lecture_common_func.parse_dl_nm_and_address">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_dl_nm_and_address</span><span class="p">(</span><span class="n">raw_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    디지털 배움터(종료) 강좌 문자열에서 주소 정보와 강좌명을 분리 파싱한다.</span>
+
+<span class="sd">    DL_NM 컬럼에 포함된 문자열을 분석하여 주소 영역과 강좌명을 분리한다.</span>
+<span class="sd">    괄호 패턴 또는 공백 구분 규칙을 기준으로 파싱하며,</span>
+<span class="sd">    파싱이 불가능한 경우 일부 값은 None으로 반환한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    raw_str : str</span>
+<span class="sd">        디지털 배움터 강좌 문자열.</span>
+<span class="sd">        주소 정보와 강좌명이 혼합된 원본 문자열이다.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple[str | None, str | None]</span>
+<span class="sd">        (address, dl_nm) 형태의 튜플.</span>
+<span class="sd">        주소 또는 강좌명 파싱이 불가능한 경우 해당 값은 None으로 반환된다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        입력 값이 문자열로 변환 불가능한 타입인 경우 발생할 수 있다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">raw_str</span> <span class="ow">or</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">raw_str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">raw_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">raw_str</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="c1"># 첫 번째 닫는 괄호</span>
+    <span class="n">first_close_idx</span> <span class="o">=</span> <span class="n">raw_str</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">first_close_idx</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">raw_str</span>
+
+    <span class="c1"># 두 번째 닫는 괄호</span>
+    <span class="n">second_close_idx</span> <span class="o">=</span> <span class="n">raw_str</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">,</span> <span class="n">first_close_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># -----------------------------</span>
+    <span class="c1"># CASE 1: 두 번째 &#39;)&#39;가 있는 경우 (기존 로직)</span>
+    <span class="c1"># -----------------------------</span>
+    <span class="k">if</span> <span class="n">second_close_idx</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">raw_str</span><span class="p">[:</span><span class="n">second_close_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="c1"># 두 번째 &#39;)&#39; 이후 문자열</span>
+        <span class="n">rest</span> <span class="o">=</span> <span class="n">raw_str</span><span class="p">[</span><span class="n">second_close_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span>
+        <span class="n">dl_nm</span> <span class="o">=</span> <span class="n">rest</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;위치보기&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">address</span><span class="p">,</span> <span class="n">dl_nm</span> <span class="k">if</span> <span class="n">dl_nm</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># -----------------------------</span>
+    <span class="c1"># CASE 2: 두 번째 &#39;)&#39;가 없는 경우</span>
+    <span class="c1"># → 공백 2칸 기준 분리</span>
+    <span class="c1"># -----------------------------</span>
+    <span class="k">if</span> <span class="s2">&quot;  &quot;</span> <span class="ow">in</span> <span class="n">raw_str</span><span class="p">:</span>
+        <span class="n">addr_part</span><span class="p">,</span> <span class="n">dl_nm_part</span> <span class="o">=</span> <span class="n">raw_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;  &quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="n">addr_part</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">dl_nm</span> <span class="o">=</span> <span class="n">dl_nm_part</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;위치보기&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">address</span><span class="p">,</span> <span class="n">dl_nm</span> <span class="k">if</span> <span class="n">dl_nm</span> <span class="k">else</span> <span class="kc">None</span>
+    
+    <span class="c1"># fallback</span>
+    <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">raw_str</span></div>
+
+
+
+<div class="viewcode-block" id="fetch_road_address">
+<a class="viewcode-back" href="../../../dags.utils.lecture_common_func.html#dags.utils.lecture_common_func.fetch_road_address">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_road_address</span><span class="p">(</span><span class="n">keyword</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">api_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    주소 검색 API를 호출하여 키워드에 해당하는 도로명 주소를 조회한다.</span>
+
+<span class="sd">    경기도 평생학습 데이터 처리 과정에서 사용되며,</span>
+<span class="sd">    입력된 키워드를 기준으로 도로명주소 검색 API를 호출한 뒤</span>
+<span class="sd">    조회 결과 중 첫 번째 도로명 주소를 반환한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    keyword : str</span>
+<span class="sd">        주소 검색에 사용할 키워드 문자열.</span>
+<span class="sd">    api_key : str</span>
+<span class="sd">        주소 검색 API 인증 키.</span>
+<span class="sd">    api_url : str</span>
+<span class="sd">        주소 검색 API 엔드포인트 URL.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str or None</span>
+<span class="sd">        조회된 도로명 주소.</span>
+<span class="sd">        검색 결과가 없거나 오류가 발생한 경우 None을 반환한다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    requests.exceptions.RequestException</span>
+<span class="sd">        HTTP 요청 과정에서 네트워크 오류가 발생할 수 있다.</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        API 응답이 JSON 형식이 아니거나 파싱에 실패한 경우 발생할 수 있다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># 주소 찾기 api</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">keyword</span> <span class="ow">or</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">keyword</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;confmKey&quot;</span><span class="p">:</span> <span class="n">api_key</span><span class="p">,</span>
+        <span class="s2">&quot;currentPage&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="s2">&quot;countPerPage&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="s2">&quot;keyword&quot;</span><span class="p">:</span> <span class="n">keyword</span><span class="p">,</span>
+        <span class="s2">&quot;resultType&quot;</span><span class="p">:</span> <span class="s2">&quot;json&quot;</span>
+    <span class="p">}</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">res</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="n">common</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;results&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">if</span> <span class="n">common</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;errorCode&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;0&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">common</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;totalCount&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">juso_list</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;juso&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">juso_list</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="c1"># 대원1동 행정복지센터 예외 처리</span>
+        <span class="k">if</span> <span class="n">keyword</span> <span class="o">==</span> <span class="s2">&quot;대원1동 행정복지센터&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">juso_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">juso_list</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;roadAddr&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        
+        <span class="k">return</span> <span class="n">juso_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;roadAddr&quot;</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[주소 조회 실패] keyword=</span><span class="si">{</span><span class="n">keyword</span><span class="si">}</span><span class="s2">, error=</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="resolve_lc_and_coord">
+<a class="viewcode-back" href="../../../dags.utils.lecture_common_func.html#dags.utils.lecture_common_func.resolve_lc_and_coord">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_lc_and_coord</span><span class="p">(</span><span class="n">address</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    주소 문자열을 기준으로 행정구역 정보와 좌표 정보를 조회한다.</span>
+
+<span class="sd">    카카오 주소 검색 API를 호출하여 입력된 주소에 해당하는</span>
+<span class="sd">    시도, 구, 동 정보와 좌표(x, y)를 반환한다.</span>
+<span class="sd">    API response 중 address 정보가 없는 경우에는 road_address 정보를 대체로 사용한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    address : str</span>
+<span class="sd">        행정구역 및 좌표 조회에 사용할 주소 문자열.</span>
+<span class="sd">    api_key : str</span>
+<span class="sd">        카카오 주소 검색 API 인증 키.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple[str | None, str | None, str | None, str | None, str | None]</span>
+<span class="sd">        (lc1, lc2, lc3, x, y) 형태의 튜플.</span>
+<span class="sd">        각 값은 순서대로 시도, 구, 동, x좌표, y좌표이며,</span>
+<span class="sd">        조회 실패 시 모든 값은 None으로 반환된다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    KeyError</span>
+<span class="sd">        API 응답 데이터 구조가 예상과 다른 경우 발생할 수 있다.</span>
+<span class="sd">    TypeError</span>
+<span class="sd">        API 응답이 딕셔너리 형태가 아닌 경우 발생할 수 있다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">fetch_geocding</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="n">api_key</span><span class="p">,</span> <span class="n">max_retry</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;documents&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;documents&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># address 우선, 없으면 road_address</span>
+    <span class="n">addr</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;address&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;road_address&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">addr</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="n">lc1</span> <span class="o">=</span> <span class="n">addr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;region_1depth_name&quot;</span><span class="p">)</span>
+    <span class="n">lc2</span> <span class="o">=</span> <span class="n">addr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;region_2depth_name&quot;</span><span class="p">)</span>
+    <span class="n">lc3</span> <span class="o">=</span> <span class="n">addr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;region_3depth_name&quot;</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">addr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">addr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">addr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">addr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">lc1</span><span class="p">,</span> <span class="n">lc2</span><span class="p">,</span> <span class="n">lc3</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Team 7.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

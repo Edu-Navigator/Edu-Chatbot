@@ -1,0 +1,289 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dags.digital_learning_ci &mdash; Digital Edu Chatbot 1.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=25ffd669"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/translations.js?v=afa94a99"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="../../genindex.html" />
+    <link rel="search" title="검색" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Digital Edu Chatbot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">dags</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Digital Edu Chatbot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">모듈 코드</a></li>
+      <li class="breadcrumb-item active">dags.digital_learning_ci</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>dags.digital_learning_ci의 소스 코드</h1><div class="highlight"><pre>
+<span></span><span class="c1"># airflow/dags/digital_learning_ci.py</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">디지털 학습 강의 크롤링 DAG</span>
+
+<span class="sd">이 DAG는 특정 교육 사이트에서 강의 정보를 수집하여 통합 CSV 파일을 생성합니다.</span>
+<span class="sd">1. 강의 목록 수집 (collect_list)</span>
+<span class="sd">2. 상세 정보 수집 (collect_detail)</span>
+<span class="sd">3. CSV 파일 저장 (save_csv)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># CI 환경에서는 실제 크롤링을 수행하지 않고,</span>
+<span class="c1"># DAG import 및 태스크 실행 가능 여부만 검증한다.</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">DAG</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.python</span><span class="w"> </span><span class="kn">import</span> <span class="n">PythonOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.utils.dates</span><span class="w"> </span><span class="kn">import</span> <span class="n">days_ago</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dateutil.relativedelta</span><span class="w"> </span><span class="kn">import</span> <span class="n">relativedelta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">common.default_args</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_ARGS</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<div class="viewcode-block" id="collect_list">
+<a class="viewcode-back" href="../../dags.digital_learning_ci.html#dags.digital_learning_ci.collect_list">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">collect_list</span><span class="p">(</span><span class="o">**</span><span class="n">context</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    교육 과정 목록 페이지에서 강의 리스트를 수집한다.</span>
+<span class="sd">    </span>
+<span class="sd">    Selenium을 사용하여 목록 페이지에 접근한 뒤,</span>
+<span class="sd">    수집 결과를 CSV 파일로 저장하고 파일 경로를 XCom으로 전달한다.</span>
+<span class="sd">    CI 환경에서는 실제 크롤링 대신 페이지 접근 여부만 검증한다.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ------------</span>
+<span class="sd">    **context : dict</span>
+<span class="sd">        Airflow task context 객체.</span>
+<span class="sd">        XCom push를 위해 task instance(`ti`)를 포함한다.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">        결과는 CSV 파일로 저장되며,</span>
+<span class="sd">        파일 경로는 XCom을 통해 다음 태스크로 전달된다.</span>
+<span class="sd">    </span>
+<span class="sd">    :param context: 설명</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># CI 환경에서는 실제 데이터 수집 대신 드라이버 동작만 검증  </span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">selenium</span><span class="w"> </span><span class="kn">import</span> <span class="n">webdriver</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.chrome.options</span><span class="w"> </span><span class="kn">import</span> <span class="n">Options</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.common.by</span><span class="w"> </span><span class="kn">import</span> <span class="n">By</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.support.ui</span><span class="w"> </span><span class="kn">import</span> <span class="n">WebDriverWait</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.support</span><span class="w"> </span><span class="kn">import</span> <span class="n">expected_conditions</span> <span class="k">as</span> <span class="n">EC</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">selenium.webdriver.chrome.service</span><span class="w"> </span><span class="kn">import</span> <span class="n">Service</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_driver</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Selenium Chrome WebDriver를 생성한다.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        selenium.webdriver.Chrome</span>
+<span class="sd">            Headless 모드로 설정된 Chrome WebDriver 객체</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">options</span> <span class="o">=</span> <span class="n">Options</span><span class="p">()</span>
+        <span class="n">options</span><span class="o">.</span><span class="n">binary_location</span> <span class="o">=</span> <span class="s2">&quot;/usr/bin/chromium&quot;</span>
+        <span class="n">options</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--headless&quot;</span><span class="p">)</span>
+        <span class="n">options</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--no-sandbox&quot;</span><span class="p">)</span>
+        <span class="n">options</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--disable-dev-shm-usage&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">webdriver</span><span class="o">.</span><span class="n">Chrome</span><span class="p">(</span>
+            <span class="n">service</span><span class="o">=</span><span class="n">Service</span><span class="p">(</span><span class="s2">&quot;/usr/bin/chromedriver&quot;</span><span class="p">),</span>
+            <span class="n">options</span><span class="o">=</span><span class="n">options</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">make_detail_url</span><span class="p">(</span><span class="n">edc_oprtn_id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        강의 상세 페이지 URL을 생성한다.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        edc_oprtn_id : str</span>
+<span class="sd">            강의 운영 ID</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            강의 상세 페이지 URL</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="s2">&quot;https://www.xn--2z1bw8k1pjz5ccumkb.kr/edc/crse/oprtn/dtl.do&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;?edc_oprtn_id=</span><span class="si">{</span><span class="n">edc_oprtn_id</span><span class="si">}</span><span class="s2">&amp;edu_type=E&amp;active_tab=a_end&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">driver</span> <span class="o">=</span> <span class="n">get_driver</span><span class="p">()</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># CI 환경에서는 외부 사이트 접근을 피하기 위해</span>
+    <span class="c1"># 실제 대상 사이트 대신 example.com으로 드라이버 동작만 확인</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;https://example.com&quot;</span><span class="p">)</span>  <span class="c1"># CI 안전용</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">driver</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="s2">&quot;/opt/airflow/data/list.csv&quot;</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">context</span><span class="p">[</span><span class="s2">&quot;ti&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">xcom_push</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;list_path&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">path</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="collect_detail">
+<a class="viewcode-back" href="../../dags.digital_learning_ci.html#dags.digital_learning_ci.collect_detail">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">collect_detail</span><span class="p">(</span><span class="o">**</span><span class="n">context</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    강의 상세 페이지 정보를 수집한다.</span>
+
+<span class="sd">    이전 태스크에서 전달받은 강의 목록을 기반으로</span>
+<span class="sd">    각 강의의 상세 정보를 수집한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **context : dict</span>
+<span class="sd">        Airflow task context 객체.</span>
+<span class="sd">        이전 태스크에서 전달된 XCom 데이터를 포함한다.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">        상세 정보는 XCom 또는 임시 파일로 저장된다.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    NotImplementedError</span>
+<span class="sd">        상세 수집 로직이 아직 구현되지 않은 경우</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># CI 테스트 단계에서는 미구현 (DAG import / task 연결 검증용)</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="save_csv">
+<a class="viewcode-back" href="../../dags.digital_learning_ci.html#dags.digital_learning_ci.save_csv">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_csv</span><span class="p">(</span><span class="o">**</span><span class="n">context</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    수집된 데이터를 하나의 CSV 파일로 저장한다.</span>
+
+<span class="sd">    이전 태스크들에서 전달된 데이터를 병합하여</span>
+<span class="sd">    최종 CSV 파일을 생성한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    **context : dict</span>
+<span class="sd">        Airflow task context 객체.</span>
+<span class="sd">        수집된 데이터 경로를 XCom으로 전달받는다.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">        최종 CSV 파일을 지정된 경로에 저장한다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># CI 테스트 단계에서는 미구현 (DAG import / task 연결 검증용)</span>
+    <span class="k">pass</span></div>
+
+
+
+<span class="c1"># CI 전용 DAG: 수동 트리거 기반, 스케줄 없음</span>
+<span class="k">with</span> <span class="n">DAG</span><span class="p">(</span>
+    <span class="n">dag_id</span><span class="o">=</span><span class="s2">&quot;digital_learning_crawl_ci&quot;</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="n">days_ago</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">schedule_interval</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>   
+    <span class="n">catchup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="s2">&quot;ci&quot;</span><span class="p">],</span>
+    <span class="n">default_args</span><span class="o">=</span><span class="n">DEFAULT_ARGS</span><span class="p">,</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">dag</span><span class="p">:</span>
+
+
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">PythonOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s2">&quot;collect_list&quot;</span><span class="p">,</span> <span class="n">python_callable</span><span class="o">=</span><span class="n">collect_list</span><span class="p">)</span>
+    <span class="n">t2</span> <span class="o">=</span> <span class="n">PythonOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s2">&quot;collect_detail&quot;</span><span class="p">,</span> <span class="n">python_callable</span><span class="o">=</span><span class="n">collect_detail</span><span class="p">)</span>
+    <span class="n">t3</span> <span class="o">=</span> <span class="n">PythonOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s2">&quot;save_csv&quot;</span><span class="p">,</span> <span class="n">python_callable</span><span class="o">=</span><span class="n">save_csv</span><span class="p">)</span>
+
+    <span class="n">t1</span> <span class="o">&gt;&gt;</span> <span class="n">t2</span> <span class="o">&gt;&gt;</span> <span class="n">t3</span>
+    
+    
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Team 7.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

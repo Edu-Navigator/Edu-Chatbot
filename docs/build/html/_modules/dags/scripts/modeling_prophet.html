@@ -1,0 +1,531 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ko" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dags.scripts.modeling_prophet &mdash; Digital Edu Chatbot 1.0 문서</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=25ffd669"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/translations.js?v=afa94a99"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="색인" href="../../../genindex.html" />
+    <link rel="search" title="검색" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            Digital Edu Chatbot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">dags</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Digital Edu Chatbot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">모듈 코드</a></li>
+      <li class="breadcrumb-item active">dags.scripts.modeling_prophet</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>dags.scripts.modeling_prophet의 소스 코드</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">airflow.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Variable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">task</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.providers.amazon.aws.hooks.s3</span><span class="w"> </span><span class="kn">import</span> <span class="n">S3Hook</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.providers.postgres.hooks.postgres</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresHook</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">prophet</span><span class="w"> </span><span class="kn">import</span> <span class="n">Prophet</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">joblib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span><span class="o">,</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;airflow.task&quot;</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;prophet&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;cmdstanpy&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+
+<div class="viewcode-block" id="normalize">
+<a class="viewcode-back" href="../../../dags.scripts.modeling_prophet.html#dags.scripts.modeling_prophet.normalize">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    그룹명 생성시 사용되는 문자열 표준화</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    text : str</span>
+<span class="sd">        그룹 텍스트</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        공백 처리된 문자열</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\s+&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">text</span></div>
+
+
+<div class="viewcode-block" id="make_group_id">
+<a class="viewcode-back" href="../../../dags.scripts.modeling_prophet.html#dags.scripts.modeling_prophet.make_group_id">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_group_id</span><span class="p">(</span><span class="n">lc_1</span><span class="p">,</span> <span class="n">lc_2</span><span class="p">,</span> <span class="n">lctr_category</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    모델명 저장시 사용할 그룹명 생성</span>
+
+<span class="sd">    전처리된 각 문자열을 사용해 그룹명을 생성한다</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lc_1 : str</span>
+<span class="sd">        지역(도, 시)</span>
+<span class="sd">    lc_2 : str</span>
+<span class="sd">        지역(시, 구)</span>
+<span class="sd">    lctr_category : str</span>
+<span class="sd">        교육 구분</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        구분자가 포함된 그룹명</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;grp__</span><span class="si">{</span><span class="n">normalize</span><span class="p">(</span><span class="n">lc_1</span><span class="p">)</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">normalize</span><span class="p">(</span><span class="n">lc_2</span><span class="p">)</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">normalize</span><span class="p">(</span><span class="n">lctr_category</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="make_train_data">
+<a class="viewcode-back" href="../../../dags.scripts.modeling_prophet.html#dags.scripts.modeling_prophet.make_train_data">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_train_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">today</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    prophet 모델 훈련데이터 생성</span>
+
+<span class="sd">    현 그룹의 최초 데이터 발생 시점부터 현재(dag 수행일)전 까지 시점 생성</span>
+<span class="sd">    각 시점별 시작된 강의 수를 y값으로 사용(강의가 없다면 0)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data : pd.DataFrame</span>
+<span class="sd">        현재 그룹의 input 데이터</span>
+<span class="sd">    row : pd.Series</span>
+<span class="sd">        현재 그룹에 대한 통계 정보</span>
+<span class="sd">    today : str</span>
+<span class="sd">        모델링 시점 일자</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pd.DataFrame</span>
+<span class="sd">        현 그룹의 훈련데이터(ds, y)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">all_dates</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;min_lctr_bgn&#39;</span><span class="p">],</span>
+            <span class="n">end</span>   <span class="o">=</span> <span class="n">today</span><span class="p">,</span>
+            <span class="n">inclusive</span><span class="o">=</span><span class="s1">&#39;left&#39;</span>
+        <span class="p">)</span>
+    
+    <span class="n">daily_data</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;lctr_bgn&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">all_dates</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="n">daily_data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ds&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">daily_data</span></div>
+
+
+<span class="nd">@task</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">train_prophet_models</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">s3_base_prefix</span><span class="p">,</span> <span class="n">s3_conn</span><span class="o">=</span><span class="s2">&quot;aws_default&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    prophet 모델 훈련</span>
+
+<span class="sd">    강의 시작일별 강의 건수를 활용해 prophet 모델을 훈련한다.</span>
+<span class="sd">    지역, 교육 구분별로 모델링을 진행하며 </span>
+<span class="sd">    최소 데이터가 5건 이상 존재하는 그룹만 훈련을 수행한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    schema : str</span>
+<span class="sd">        input 데이터 schema 명</span>
+<span class="sd">    table : str</span>
+<span class="sd">        input 데이터 table 명</span>
+<span class="sd">    bucket : str</span>
+<span class="sd">        모델 저장될 s3 버킷명</span>
+<span class="sd">    s3_base_prefix : str</span>
+<span class="sd">        모델 저장될 기본 s3 경로</span>
+<span class="sd">    s3_conn : str</span>
+<span class="sd">        default = &#39;aws_default&#39;</span>
+<span class="sd">        Airflow Connections에 등록된 s3 연결명</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - 그룹</span>
+<span class="sd">        - 지역(도,시,구), 교육구분별 모델링 진행</span>
+<span class="sd">    - 훈련 대상</span>
+<span class="sd">        - 최소 데이터가 5건 이상인 경우 훈련 진행</span>
+<span class="sd">    - 모델 훈련</span>
+<span class="sd">        - prophet은 데이터 값이 작거나 패턴 추론에 실패하는 경우 에러가 발생함.</span>
+<span class="sd">        - 에러가 발생한 그룹은 로그 띄우고 skip</span>
+<span class="sd">    - 모델 저장</span>
+<span class="sd">        - latest 및 훈련일 폴더에 저장</span>
+<span class="sd">    - metadata 정보 저장</span>
+<span class="sd">        - 최근 훈련된 그룹 정보 확인 가능</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 데이터 전처리</span>
+    <span class="n">hook</span> <span class="o">=</span> <span class="n">PostgresHook</span><span class="p">(</span><span class="n">postgres_conn_id</span><span class="o">=</span><span class="s1">&#39;conn_production&#39;</span><span class="p">)</span>
+    <span class="n">select_query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    SELECT </span>
+<span class="s2">        * </span>
+<span class="s2">    FROM </span><span class="si">{</span><span class="n">schema</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">table</span><span class="si">}</span>
+<span class="s2">    WHERE lctr_bgn &gt;= &#39;2021-01-01&#39;;</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">hook</span><span class="o">.</span><span class="n">get_pandas_df</span><span class="p">(</span><span class="n">select_query</span><span class="p">)</span>
+    
+    <span class="n">grp_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;lc_1&#39;</span><span class="p">,</span> <span class="s1">&#39;lc_2&#39;</span><span class="p">,</span> <span class="s1">&#39;lctr_category&#39;</span><span class="p">],</span><span class="n">as_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>\
+                <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+                    <span class="n">count_row</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;lctr_bgn&#39;</span><span class="p">,</span><span class="s1">&#39;count&#39;</span><span class="p">),</span>
+                    <span class="n">min_lctr_bgn</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;lctr_bgn&#39;</span><span class="p">,</span> <span class="s1">&#39;min&#39;</span><span class="p">),</span>
+                <span class="p">)</span>\
+                <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s1">&#39;count_row&#39;</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">grp_df</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">grp_df</span>
+        <span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;count_row &gt;= 5&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="p">)</span> <span class="c1"># 각 그룹의 최소 row 수가 5개 이상</span>
+    
+    <span class="c1"># group별 모델 훈련 및 pkl 파일 저장</span>
+    <span class="n">today</span>     <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;data_interval_end&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_date_string</span><span class="p">()</span>
+    <span class="n">today_key</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;data_interval_end&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="n">s3hook</span>   <span class="o">=</span> <span class="n">S3Hook</span><span class="p">(</span><span class="n">aws_conn_id</span><span class="o">=</span><span class="n">s3_conn</span><span class="p">)</span>
+    <span class="n">s3client</span> <span class="o">=</span> <span class="n">s3hook</span><span class="o">.</span><span class="n">get_conn</span><span class="p">()</span> <span class="c1"># boto3 client</span>
+    
+    <span class="n">trained_groups</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grp_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">group</span> <span class="o">=</span> <span class="n">make_group_id</span><span class="p">(</span>
+            <span class="n">lc_1</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;lc_1&#39;</span><span class="p">],</span> 
+            <span class="n">lc_2</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;lc_2&#39;</span><span class="p">],</span> 
+            <span class="n">lctr_category</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;lctr_category&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># 현재 그룹의 훈련 데이터 생성</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;lctr_category==&#39;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;lctr_category&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; &amp; lc_1==&#39;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;lc_1&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; &amp; lc_2==&#39;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;lc_2&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="n">cur_data</span>   <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">train_data</span> <span class="o">=</span> <span class="n">make_train_data</span><span class="p">(</span><span class="n">cur_data</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">today</span><span class="p">)</span>
+        
+        <span class="c1"># prophet 모델 훈련</span>
+        <span class="k">try</span> <span class="p">:</span> 
+            <span class="n">model</span> <span class="o">=</span> <span class="n">Prophet</span><span class="p">(</span>
+                <span class="n">growth</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span>
+                <span class="n">weekly_seasonality</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>   <span class="c1"># 요일 효과 중요</span>
+                <span class="n">yearly_seasonality</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> 
+                <span class="n">daily_seasonality</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">add_country_holidays</span><span class="p">(</span><span class="n">country_name</span><span class="o">=</span><span class="s1">&#39;KR&#39;</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+            
+            <span class="c1"># 모델 저장</span>
+            <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.pkl&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+                <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">tmp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                
+                <span class="n">s3client</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span>
+                    <span class="n">tmp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">bucket</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s3_base_prefix</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">today_key</span><span class="si">}</span><span class="s2">/model_</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2">.pkl&quot;</span>
+                <span class="p">)</span>
+                
+                <span class="n">s3client</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span>
+                    <span class="n">tmp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">bucket</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s3_base_prefix</span><span class="si">}</span><span class="s2">/latest/model_</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2">.pkl&quot;</span>
+                <span class="p">)</span>
+            
+            <span class="n">trained_groups</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully Trained : </span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span> <span class="p">:</span>
+            <span class="c1"># 에러 발생 : 현재 그룹 훈련 Skip</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error Occured during training : </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skip Training model for Group :</span><span class="se">\n\t</span><span class="s2"> </span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+    <span class="c1"># end-for loop</span>
+    
+    <span class="c1"># metadata저장 : 이번에 훈련된 group 정보</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;trained_at_based_execution_date&quot;</span><span class="p">:</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;execution_date&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+        <span class="s2">&quot;trained_at&quot;</span> <span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+        <span class="s2">&quot;model_date&quot;</span><span class="p">:</span> <span class="n">today</span><span class="p">,</span>
+        <span class="s2">&quot;groups&quot;</span><span class="p">:</span> <span class="n">trained_groups</span><span class="p">,</span>
+        <span class="s2">&quot;algorithm&quot;</span><span class="p">:</span> <span class="s2">&quot;prophet&quot;</span>
+    <span class="p">}</span>
+    
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.json&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">tmp</span><span class="p">)</span>
+        <span class="n">tmp</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+        <span class="n">s3client</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">bucket</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s3_base_prefix</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">today_key</span><span class="si">}</span><span class="s2">/metadata.json&quot;</span>
+        <span class="p">)</span>
+        <span class="n">s3client</span><span class="o">.</span><span class="n">upload_file</span><span class="p">(</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">bucket</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s3_base_prefix</span><span class="si">}</span><span class="s2">/latest/metadata.json&quot;</span>
+        <span class="p">)</span>    
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;End Training Prophet : </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">trained_groups</span><span class="p">)</span><span class="si">}</span><span class="s2"> is trained&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="check_latest_model_exists">
+<a class="viewcode-back" href="../../../dags.scripts.modeling_prophet.html#dags.scripts.modeling_prophet.check_latest_model_exists">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_latest_model_exists</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">conn_name</span><span class="o">=</span><span class="s1">&#39;aws_default&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="p">)</span> <span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    pkl 파일 존재 확인</span>
+
+<span class="sd">    ShortCircuitOperator와 사용되는 함수로</span>
+<span class="sd">    S3 latest 경로에 pkl 모델이 하나라도 있는지 확인한다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bucket : str</span>
+<span class="sd">        탐색할 s3 버킷명</span>
+<span class="sd">    prefix : str</span>
+<span class="sd">        탐색할 s3 경로명</span>
+<span class="sd">    conn_name : str</span>
+<span class="sd">        default = &#39;aws_default&#39;</span>
+<span class="sd">        Airflow Connections에 등록된 s3 연결명</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    boolean</span>
+<span class="sd">        False이면 downstream task를 skip한다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s3hook</span>   <span class="o">=</span> <span class="n">S3Hook</span><span class="p">(</span><span class="n">aws_conn_id</span><span class="o">=</span><span class="n">conn_name</span><span class="p">)</span>
+    <span class="n">s3client</span> <span class="o">=</span> <span class="n">s3hook</span><span class="o">.</span><span class="n">get_conn</span><span class="p">()</span> <span class="c1"># boto3 client</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">s3client</span><span class="o">.</span><span class="n">list_objects_v2</span><span class="p">(</span>
+        <span class="n">Bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span>
+        <span class="n">Prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;Contents&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">response</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;No objects found in latest model path.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="n">model_files</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">obj</span><span class="p">[</span><span class="s2">&quot;Key&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;Contents&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">obj</span><span class="p">[</span><span class="s2">&quot;Key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.pkl&quot;</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">model_files</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;No model (.pkl) files found in latest.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">model_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> model files.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="get_group_values">
+<a class="viewcode-back" href="../../../dags.scripts.modeling_prophet.html#dags.scripts.modeling_prophet.get_group_values">[문서]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_group_values</span><span class="p">(</span><span class="n">grp_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    그룹명 분할</span>
+
+<span class="sd">    &#39;__&#39;로 구분된 각 그룹명 구성 요소를 추출한다.</span>
+<span class="sd">    &#39;_&#39;로 치환된 띄워쓰기를 원복시킨다.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    grp_name : str</span>
+<span class="sd">        모델 그룹명</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        그룹명을 구성하던 지역 및 교육구분 정보</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">grp_ele</span> <span class="o">=</span> <span class="n">grp_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="c1"># _ -&gt; whitespace 로 변환</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;lc_1&#39;</span> <span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">grp_ele</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> 
+        <span class="s1">&#39;lc_2&#39;</span> <span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">grp_ele</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+        <span class="s1">&#39;lctr_category&#39;</span> <span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">grp_ele</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+    <span class="p">}</span></div>
+
+
+<span class="nd">@task</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">predict_prophet</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;models/prophet/latest/&quot;</span><span class="p">,</span> <span class="n">conn_name</span><span class="o">=</span><span class="s2">&quot;aws_default&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    prophet 예측 수행</span>
+
+<span class="sd">    latest에 저장된 모델을 기준으로 예측을 수행한다.</span>
+<span class="sd">    dag 실행일 기준으로 예측데이터 시점을 생성하고 예측값을 산출한다.</span>
+<span class="sd">    yhat이 0이 아닌 ds를 사용하며 룰 기반으로 최종 수강신청 시작일을 계산한다.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bucket : str</span>
+<span class="sd">        모델 저장 s3 버킷명</span>
+<span class="sd">    prefix : str</span>
+<span class="sd">        default=&#39;models/prophet/latest/&#39;</span>
+<span class="sd">        모델 저장 s3 경로</span>
+<span class="sd">    conn_name</span>
+<span class="sd">        default=&#39;aws_default&#39;</span>
+<span class="sd">        Airflow Connections에 등록된 s3 연결명</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        task 실행 결과로 생성된 파일 경로이다.</span>
+<span class="sd">        downstream task에서 입력으로 사용된다.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - 예측용 input 데이터</span>
+<span class="sd">        - 예측 수행시점을 기준으로 미래 30일 생성</span>
+<span class="sd">    - 예측값 후처리</span>
+<span class="sd">        - yhat값이 0.3 이상인 ds만 활용</span>
+<span class="sd">        - 강의 시작일자를 의미하는 ds의 20일 이전 date 계산</span>
+<span class="sd">        - date가 예측 수행시점보다 미래인 경우만 최종값으로 활용</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s3hook</span>   <span class="o">=</span> <span class="n">S3Hook</span><span class="p">(</span><span class="n">aws_conn_id</span><span class="o">=</span><span class="n">conn_name</span><span class="p">)</span>
+    <span class="n">s3client</span> <span class="o">=</span> <span class="n">s3hook</span><span class="o">.</span><span class="n">get_conn</span><span class="p">()</span> <span class="c1"># boto3 client</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">s3client</span><span class="o">.</span><span class="n">list_objects_v2</span><span class="p">(</span>
+        <span class="n">Bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span>
+        <span class="n">Prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">model_keys</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">obj</span><span class="p">[</span><span class="s2">&quot;Key&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Contents&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">if</span> <span class="n">obj</span><span class="p">[</span><span class="s2">&quot;Key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.pkl&quot;</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">model_keys</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No model files found, but prediction task was triggered.&quot;</span><span class="p">)</span>
+
+    <span class="n">predictions</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="n">today</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;ds&#39;</span><span class="p">]</span>
+    <span class="n">future</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+        <span class="s2">&quot;ds&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">today</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s2">&quot;D&quot;</span><span class="p">)</span>
+    <span class="p">})</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">model_keys</span><span class="p">:</span>
+        <span class="n">group_id</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.pkl&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">group_values</span> <span class="o">=</span> <span class="n">get_group_values</span><span class="p">(</span><span class="n">group_id</span><span class="p">)</span>
+        
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[@@] Start forecasting... </span><span class="si">{</span><span class="n">group_id</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">group_values</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># 1) 모델 다운로드</span>
+        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp</span><span class="p">:</span>
+            <span class="n">s3client</span><span class="o">.</span><span class="n">download_file</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">tmp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">tmp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># 2) 예측 수행 &amp; 예측값 전처리</span>
+        <span class="n">forecast</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
+        <span class="n">forecast</span><span class="p">[</span><span class="s1">&#39;yhat&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">forecast</span><span class="p">[</span><span class="s1">&#39;yhat&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">forecast</span><span class="p">[</span><span class="s1">&#39;yhat&#39;</span><span class="p">])</span>
+            <span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">forecast</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;yhat &gt; 0&quot;</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">:</span>
+            <span class="c1"># 예측 결과가 0보다 큰 경우만 적재</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">forecast</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;yhat &gt; 0&quot;</span><span class="p">)[[</span><span class="s1">&#39;ds&#39;</span><span class="p">,</span> <span class="s1">&#39;yhat&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="o">**</span><span class="n">group_values</span><span class="p">))</span>
+            
+            <span class="n">predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">forecast</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;yhat &gt; 0&quot;</span><span class="p">)[[</span><span class="s1">&#39;ds&#39;</span><span class="p">,</span> <span class="s1">&#39;yhat&#39;</span><span class="p">]]</span>\
+                    <span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="o">**</span><span class="n">group_values</span><span class="p">)</span>
+            <span class="p">)</span>
+    <span class="c1"># end for-loop</span>
+    
+    <span class="c1"># 예상 수강 신청일자 계산 : ds - 20일 (데이터상의 중앙값 기준)</span>
+    <span class="c1"># 예상결과가 오늘 일자보다 미래인 경우만 적재</span>
+    <span class="n">all_preds</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">predictions</span><span class="p">)</span>
+    <span class="n">all_preds</span><span class="p">[</span><span class="s1">&#39;pred_aply_bgn&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_preds</span><span class="p">[</span><span class="s2">&quot;ds&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">all_preds</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">all_preds</span><span class="p">[</span><span class="n">all_preds</span><span class="p">[</span><span class="s1">&#39;pred_aply_bgn&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">today</span><span class="p">]</span>
+        <span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ds&#39;</span><span class="p">,</span> <span class="s1">&#39;yhat&#39;</span><span class="p">])</span>
+    <span class="p">)</span>
+    
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Preditions : &quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span><span class="n">all_preds</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;=================================&quot;</span><span class="p">)</span>
+    
+    <span class="n">path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">Variable</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DATA_DIR&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">/pred_prophet.csv&quot;</span>
+    <span class="n">all_preds</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[@@] Saved CSV File in local : </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">path</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Team 7.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
