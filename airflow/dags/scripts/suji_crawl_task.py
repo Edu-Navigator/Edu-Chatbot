@@ -61,7 +61,7 @@ def suji_crawl_task():
     try:
         driver = get_driver()
         driver.get(url)
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 60)
 
         def parse_detail_page(link):
             """

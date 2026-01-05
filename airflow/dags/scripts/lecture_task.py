@@ -3,9 +3,12 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models import Variable
 import pandas as pd
 import logging
-from utils.lecture_common_func import *
-from utils.lecture_process_func import *
-
+from utils.lecture_common_func import resolve_lc_and_coord
+from utils.lecture_process_func import (
+    process_suji,
+    process_gg,
+    process_digi_end
+)
 
 # -----------------------------------------------------------
 # 상수 및 설정

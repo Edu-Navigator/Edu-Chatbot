@@ -33,7 +33,7 @@ from datetime import datetime
 from airflow import DAG
 import pendulum
 
-from scripts.craw_imgaes import *
+from scripts.craw_imgaes import scape_images, upload_to_s3
 from common.default_args import DEFAULT_ARGS
 
 
