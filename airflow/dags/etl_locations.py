@@ -41,7 +41,11 @@ from airflow.utils.task_group import TaskGroup
 import pendulum
 
 from scripts.postgres import table_full_refresh
-from scripts.extract_locations import *
+from scripts.extract_locations import (
+    api_digi_learning_loc, 
+    et_urdn_location,
+    get_details_location
+    )
 from common.default_args import DEFAULT_ARGS
 
 

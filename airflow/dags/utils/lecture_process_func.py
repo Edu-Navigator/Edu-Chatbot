@@ -1,7 +1,13 @@
 from airflow.models import Variable
 import pandas as pd
 from datetime import date
-from utils.lecture_common_func import *
+from utils.lecture_common_func import (
+    filter_data,
+    map_and_explode_categories,
+    parse_dl_nm_and_address,
+    fetch_road_address,
+    resolve_lc_and_coord
+)
 
 
 def process_suji(df_raw: pd.DataFrame) -> pd.DataFrame:
