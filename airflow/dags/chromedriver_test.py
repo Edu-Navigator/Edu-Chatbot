@@ -1,18 +1,12 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
 from datetime import datetime
 
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By
-import time
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.remote.remote_connection import RemoteConnection
+from airflow.operators.python import PythonOperator
 from common.default_args import DEFAULT_ARGS
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+from airflow import DAG
+
 
 def selenium_test2():
     chrome_options = Options()
@@ -28,7 +22,7 @@ def selenium_test2():
     print("======================")
 
     driver.quit()
-    
+
 
 with DAG(
     dag_id="selenium_test_dag",
@@ -38,7 +32,6 @@ with DAG(
     tags=["test", "selenium"],
     default_args=DEFAULT_ARGS,
 ):
-
     test_task = PythonOperator(
         task_id="run_selenium_test",
         python_callable=selenium_test2,

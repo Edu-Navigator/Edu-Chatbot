@@ -1,16 +1,16 @@
-from airflow import DAG
+from datetime import date, datetime
+
 from airflow.decorators import task
-from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.exceptions import AirflowSkipException
-from datetime import datetime, date
-
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
+from airflow import DAG
 
 with DAG(
     dag_id="gg_learning",
@@ -19,13 +19,11 @@ with DAG(
     catchup=False,
     tags=["gg", "selenium", "crawl"],
 ) as dag:
-
     # 웹 수정일자 조회
     @task
     def get_web_updated_date() -> date:
         url = (
-            "https://data.gg.go.kr/portal/data/service/selectServicePage.do"
-            "?infId=Q318MFGTWD8D0Q36X8H112883673&infSeq=3"
+            "https://data.gg.go.kr/portal/data/service/selectServicePage.do?infId=Q318MFGTWD8D0Q36X8H112883673&infSeq=3"
         )
 
         options = Options()
@@ -36,21 +34,16 @@ with DAG(
         driver = None
         try:
             driver = webdriver.Chrome(
-                service=Service("/usr/bin/chromedriver"), 
+                service=Service("/usr/bin/chromedriver"),
                 options=options,
             )
             driver.get(url)
 
             wait = WebDriverWait(driver, 20)
-            th = wait.until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//th[contains(text(), '최종 수정일자')]")
-                )
-            )
+            th = wait.until(EC.presence_of_element_located((By.XPATH, "//th[contains(text(), '최종 수정일자')]")))
 
             web_date = datetime.strptime(
-                th.find_element(By.XPATH, "./following-sibling::td")
-                .text.strip(),
+                th.find_element(By.XPATH, "./following-sibling::td").text.strip(),
                 "%Y-%m-%d",
             ).date()
 
@@ -60,16 +53,13 @@ with DAG(
             if driver:
                 driver.quit()
 
-
     # DB 기준일 조회
     @task
     def get_db_updated_date() -> date | None:
         hook = PostgresHook(postgres_conn_id="conn_production")
         with hook.get_conn() as conn:
             with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT MAX(source_updated_at) FROM raw.gg_lifelong_learning"
-                )
+                cursor.execute("SELECT MAX(source_updated_at) FROM raw.gg_lifelong_learning")
                 result = cursor.fetchone()[0]
 
         if result:
@@ -99,7 +89,7 @@ with DAG(
 
         # TODO: 실제 크롤링 로직
         return csv_path
-    
+
     # DB 적재
     @task
     def gg_load_task(csv_path: str, web_date: date):
@@ -138,7 +128,7 @@ with DAG(
 
         with hook.get_conn() as conn:
             with conn.cursor() as cursor:
-                with open(csv_path, "r") as f:
+                with open(csv_path) as f:
                     cursor.copy_expert(copy_sql, f)
 
                 # source_updated_at 업데이트
@@ -152,7 +142,6 @@ with DAG(
                 )
 
             conn.commit()
-
 
     # =====================
     # Task Flow

@@ -1,10 +1,13 @@
+import logging
+
 import pandas as pd
 import requests
-import logging
 from utils.kakaomap_api import fetch_geocding
+
 # from airflow.models import Variable
 
 logger = logging.getLogger("airflow.task")
+
 
 def filter_data(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -31,29 +34,25 @@ def filter_data(df: pd.DataFrame) -> pd.DataFrame:
         입력 객체가 pandas.DataFrame 타입이 아닌 경우 발생할 수 있다.
     """
 
-    if 'LCTR_NM' not in df.columns:
-        return pd.DataFrame() # LCTR_NM이 없으면 빈 데이터프레임 반환
+    if "LCTR_NM" not in df.columns:
+        return pd.DataFrame()  # LCTR_NM이 없으면 빈 데이터프레임 반환
 
     df_temp = df.copy()
-    df_temp['LCTR_NM'] = df_temp['LCTR_NM'].astype(str).str.replace('&amp;', ' ')
+    df_temp["LCTR_NM"] = df_temp["LCTR_NM"].astype(str).str.replace("&amp;", " ")
 
-    lctr_nm_series = df_temp['LCTR_NM'].astype(str).str.upper()
+    lctr_nm_series = df_temp["LCTR_NM"].astype(str).str.upper()
 
     # 1. 포함 조건: 스마트폰, 키오스크, 컴퓨터 중 하나라도 포함
-    include_keywords = ['스마트폰', '키오스크', '컴퓨터']
-    include_condition = lctr_nm_series.apply(
-        lambda x: any(k in x for k in include_keywords)
-    )
+    include_keywords = ["스마트폰", "키오스크", "컴퓨터"]
+    include_condition = lctr_nm_series.apply(lambda x: any(k in x for k in include_keywords))
 
     # 2. 제외 조건: 자격증, 컴퓨터활용능력, ITQ 중 하나라도 포함
-    exclude_keywords = ['자격증', '컴퓨터활용능력', 'ITQ']
-    exclude_condition = lctr_nm_series.apply(
-        lambda x: any(k in x for k in exclude_keywords)
-    )
+    exclude_keywords = ["자격증", "컴퓨터활용능력", "ITQ"]
+    exclude_condition = lctr_nm_series.apply(lambda x: any(k in x for k in exclude_keywords))
 
     # 최종 필터링: 포함 조건은 만족, 제외 조건은 만족하지 않는 행만 선택
     filtered_df = df_temp[include_condition & ~exclude_condition].copy()
-    
+
     return filtered_df
 
 
@@ -87,45 +86,45 @@ def map_and_explode_categories(df: pd.DataFrame) -> pd.DataFrame:
 
     if df.empty:
         return df
-        
+
     # 1. 카테고리 매핑 로직
     def get_categories(lctr_nm):
         categories = []
         lctr_nm = str(lctr_nm).upper().replace(" ", "")
-        
+
         # 키오스크 매핑
-        if '키오스크' in lctr_nm:
-            categories.append('키오스크')
-            
+        if "키오스크" in lctr_nm:
+            categories.append("키오스크")
+
         # 컴퓨터 매핑
-        if '컴퓨터' in lctr_nm:
-            categories.append('컴퓨터')
-            
+        if "컴퓨터" in lctr_nm:
+            categories.append("컴퓨터")
+
         # 스마트폰 매핑
-        if '스마트폰' in lctr_nm:
+        if "스마트폰" in lctr_nm:
             # 기초, 조작, 초급 확인
-            if any(k in lctr_nm for k in ['기초', '조작', '초급']):
-                categories.append('기초 스마트폰')
+            if any(k in lctr_nm for k in ["기초", "조작", "초급"]):
+                categories.append("기초 스마트폰")
             else:
-                categories.append('스마트폰 활용')
-                
+                categories.append("스마트폰 활용")
+
         # 필터링은 통과했지만 카테고리 키워드 매핑에서 누락될 경우
         if not categories:
             categories.append(None)
-            
+
         return categories
 
     # 'CATEGORIES'라는 임시 컬럼에 각 행이 해당하는 카테고리 리스트를 저장
-    df['CATEGORIES'] = df['LCTR_NM'].apply(get_categories)
-    
+    df["CATEGORIES"] = df["LCTR_NM"].apply(get_categories)
+
     # 2. 다중 카테고리일 경우 Row 복제
-    df_exploded = df.explode('CATEGORIES')
-    
+    df_exploded = df.explode("CATEGORIES")
+
     # 3. 새로운 LCTR_CATEGORY 컬럼에 CATEGORIES 값을 할당하고 임시 컬럼 삭제
-    df_exploded['LCTR_CATEGORY'] = df_exploded['CATEGORIES']
-    
+    df_exploded["LCTR_CATEGORY"] = df_exploded["CATEGORIES"]
+
     # 4. 카테고리가 None인 Row는 LCTR_CATEGORY가 None
-    return df_exploded.drop(columns=['CATEGORIES'])
+    return df_exploded.drop(columns=["CATEGORIES"])
 
 
 def parse_dl_nm_and_address(raw_str: str):
@@ -160,22 +159,22 @@ def parse_dl_nm_and_address(raw_str: str):
     raw_str = str(raw_str).strip()
 
     # 첫 번째 닫는 괄호
-    first_close_idx = raw_str.find(')')
+    first_close_idx = raw_str.find(")")
     if first_close_idx == -1:
         return None, raw_str
 
     # 두 번째 닫는 괄호
-    second_close_idx = raw_str.find(')', first_close_idx + 1)
+    second_close_idx = raw_str.find(")", first_close_idx + 1)
 
     # -----------------------------
     # CASE 1: 두 번째 ')'가 있는 경우 (기존 로직)
     # -----------------------------
     if second_close_idx != -1:
-        address = raw_str[:second_close_idx + 1].strip()
+        address = raw_str[: second_close_idx + 1].strip()
 
         # 두 번째 ')' 이후 문자열
-        rest = raw_str[second_close_idx + 1:]
-        dl_nm = rest.split('위치보기')[0].strip()
+        rest = raw_str[second_close_idx + 1 :]
+        dl_nm = rest.split("위치보기")[0].strip()
 
         return address, dl_nm if dl_nm else None
 
@@ -186,10 +185,10 @@ def parse_dl_nm_and_address(raw_str: str):
     if "  " in raw_str:
         addr_part, dl_nm_part = raw_str.split("  ", 1)
         address = addr_part.strip()
-        dl_nm = dl_nm_part.split('위치보기')[0].strip()
+        dl_nm = dl_nm_part.split("위치보기")[0].strip()
 
         return address, dl_nm if dl_nm else None
-    
+
     # fallback
     return None, raw_str
 
@@ -229,13 +228,7 @@ def fetch_road_address(keyword: str, api_key: str, api_url: str) -> str:
     if not keyword or pd.isna(keyword):
         return None
 
-    params = {
-        "confmKey": api_key,
-        "currentPage": 1,
-        "countPerPage": 10,
-        "keyword": keyword,
-        "resultType": "json"
-    }
+    params = {"confmKey": api_key, "currentPage": 1, "countPerPage": 10, "keyword": keyword, "resultType": "json"}
 
     try:
         res = requests.get(api_url, params=params, timeout=5)
@@ -258,7 +251,7 @@ def fetch_road_address(keyword: str, api_key: str, api_url: str) -> str:
             if len(juso_list) > 1:
                 return juso_list[1].get("roadAddr")
             return None
-        
+
         return juso_list[0].get("roadAddr")
 
     except Exception as e:
@@ -297,10 +290,10 @@ def resolve_lc_and_coord(address: str, api_key: str):
     """
 
     data = fetch_geocding(address, api_key, max_retry=3)
-    
+
     if not data or not data.get("documents"):
         return None, None, None, None, None
-    
+
     doc = data["documents"][0]
 
     # address 우선, 없으면 road_address

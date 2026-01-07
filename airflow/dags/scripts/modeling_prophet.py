@@ -1,21 +1,23 @@
-from airflow.models import Variable
-from airflow.decorators import task
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-
-from prophet import Prophet
-import joblib
+import json
+import logging
+import re
 import tempfile
-import json, re
-import pandas as pd
-import numpy as np
 from datetime import datetime
 
-import logging
+import joblib
+import numpy as np
+import pandas as pd
+from airflow.decorators import task
+from airflow.models import Variable
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from prophet import Prophet
+
 logger = logging.getLogger("airflow.task")
 logger.setLevel(logging.INFO)
 logging.getLogger("prophet").setLevel(logging.WARNING)
 logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
+
 
 def normalize(text):
     """
@@ -34,6 +36,7 @@ def normalize(text):
     text = str(text).strip()
     text = re.sub(r"\s+", "_", text)
     return text
+
 
 def make_group_id(lc_1, lc_2, lctr_category):
     """
@@ -57,6 +60,7 @@ def make_group_id(lc_1, lc_2, lctr_category):
     """
     return f"grp__{normalize(lc_1)}__{normalize(lc_2)}__{normalize(lctr_category)}"
 
+
 def make_train_data(data, row, today):
     """
     prophet 모델 훈련데이터 생성
@@ -72,26 +76,18 @@ def make_train_data(data, row, today):
         현재 그룹에 대한 통계 정보
     today : str
         모델링 시점 일자
-    
+
     Returns
     -------
     pd.DataFrame
         현 그룹의 훈련데이터(ds, y)
     """
-    all_dates = pd.date_range(
-            start = row['min_lctr_bgn'],
-            end   = today,
-            inclusive='left'
-        )
-    
-    daily_data = (
-        data.groupby(data['lctr_bgn'].dt.date)
-        .size()
-        .reindex(all_dates, fill_value=0)
-        .reset_index()
-    )
-    daily_data.columns = ['ds', 'y']
+    all_dates = pd.date_range(start=row["min_lctr_bgn"], end=today, inclusive="left")
+
+    daily_data = data.groupby(data["lctr_bgn"].dt.date).size().reindex(all_dates, fill_value=0).reset_index()
+    daily_data.columns = ["ds", "y"]
     return daily_data
+
 
 @task
 def train_prophet_models(schema, table, bucket, s3_base_prefix, s3_conn="aws_default", **context):
@@ -99,7 +95,7 @@ def train_prophet_models(schema, table, bucket, s3_base_prefix, s3_conn="aws_def
     prophet 모델 훈련
 
     강의 시작일별 강의 건수를 활용해 prophet 모델을 훈련한다.
-    지역, 교육 구분별로 모델링을 진행하며 
+    지역, 교육 구분별로 모델링을 진행하며
     최소 데이터가 5건 이상 존재하는 그룹만 훈련을 수행한다.
 
     Parameters
@@ -131,7 +127,7 @@ def train_prophet_models(schema, table, bucket, s3_base_prefix, s3_conn="aws_def
         - 최근 훈련된 그룹 정보 확인 가능
     """
     # 데이터 전처리
-    hook = PostgresHook(postgres_conn_id='conn_production')
+    hook = PostgresHook(postgres_conn_id="conn_production")
     select_query = f"""
     SELECT 
         * 
@@ -139,103 +135,81 @@ def train_prophet_models(schema, table, bucket, s3_base_prefix, s3_conn="aws_def
     WHERE lctr_bgn >= '2021-01-01';
     """
     df = hook.get_pandas_df(select_query)
-    
-    grp_df = df.groupby(['lc_1', 'lc_2', 'lctr_category'],as_index=False)\
-                .agg(
-                    count_row=('lctr_bgn','count'),
-                    min_lctr_bgn=('lctr_bgn', 'min'),
-                )\
-                .sort_values('count_row', ascending=False)
+
     grp_df = (
-        grp_df
-        .query("count_row >= 5")
-        .reset_index(drop=True)
-    ) # 각 그룹의 최소 row 수가 5개 이상
-    
+        df.groupby(["lc_1", "lc_2", "lctr_category"], as_index=False)
+        .agg(
+            count_row=("lctr_bgn", "count"),
+            min_lctr_bgn=("lctr_bgn", "min"),
+        )
+        .sort_values("count_row", ascending=False)
+    )
+    grp_df = grp_df.query("count_row >= 5").reset_index(drop=True)  # 각 그룹의 최소 row 수가 5개 이상
+
     # group별 모델 훈련 및 pkl 파일 저장
-    today     = context['data_interval_end'].to_date_string()
-    today_key = context['data_interval_end'].strftime("%Y%m%d")
-    
-    s3hook   = S3Hook(aws_conn_id=s3_conn)
-    s3client = s3hook.get_conn() # boto3 client
-    
+    today = context["data_interval_end"].to_date_string()
+    today_key = context["data_interval_end"].strftime("%Y%m%d")
+
+    s3hook = S3Hook(aws_conn_id=s3_conn)
+    s3client = s3hook.get_conn()  # boto3 client
+
     trained_groups = []
     for _, row in grp_df.iterrows():
-        group = make_group_id(
-            lc_1=row['lc_1'], 
-            lc_2=row['lc_2'], 
-            lctr_category=row['lctr_category']
-        )
-        
+        group = make_group_id(lc_1=row["lc_1"], lc_2=row["lc_2"], lctr_category=row["lctr_category"])
+
         # 현재 그룹의 훈련 데이터 생성
         q = f"lctr_category=='{row['lctr_category']}' & lc_1=='{row['lc_1']}' & lc_2=='{row['lc_2']}'"
-        cur_data   = df.query(q).reset_index(drop=True)
+        cur_data = df.query(q).reset_index(drop=True)
         train_data = make_train_data(cur_data, row, today)
-        
+
         # prophet 모델 훈련
-        try : 
+        try:
             model = Prophet(
-                growth='linear',
-                weekly_seasonality=True,   # 요일 효과 중요
-                yearly_seasonality=False, 
-                daily_seasonality=True
+                growth="linear",
+                weekly_seasonality=True,  # 요일 효과 중요
+                yearly_seasonality=False,
+                daily_seasonality=True,
             )
-            model.add_country_holidays(country_name='KR')
+            model.add_country_holidays(country_name="KR")
             model.fit(train_data)
-            
+
             # 모델 저장
             with tempfile.NamedTemporaryFile(suffix=".pkl") as tmp:
                 joblib.dump(model, tmp.name)
-                
-                s3client.upload_file(
-                    tmp.name,
-                    bucket,
-                    f"{s3_base_prefix}/{today_key}/model_{group}.pkl"
-                )
-                
-                s3client.upload_file(
-                    tmp.name,
-                    bucket,
-                    f"{s3_base_prefix}/latest/model_{group}.pkl"
-                )
-            
+
+                s3client.upload_file(tmp.name, bucket, f"{s3_base_prefix}/{today_key}/model_{group}.pkl")
+
+                s3client.upload_file(tmp.name, bucket, f"{s3_base_prefix}/latest/model_{group}.pkl")
+
             trained_groups.append(group)
             logging.info(f"Successfully Trained : {group}")
-        
-        except Exception as e :
+
+        except Exception as e:
             # 에러 발생 : 현재 그룹 훈련 Skip
             logging.info(f"Error Occured during training : {e}")
             logging.info(f"Skip Training model for Group :\n\t {group}")
             continue
     # end-for loop
-    
+
     # metadata저장 : 이번에 훈련된 group 정보
     metadata = {
-        "trained_at_based_execution_date": context['execution_date'].isoformat(),
-        "trained_at" : datetime.now().isoformat(),
+        "trained_at_based_execution_date": context["execution_date"].isoformat(),
+        "trained_at": datetime.now().isoformat(),
         "model_date": today,
         "groups": trained_groups,
-        "algorithm": "prophet"
+        "algorithm": "prophet",
     }
-    
+
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as tmp:
         json.dump(metadata, tmp)
         tmp.flush()
 
-        s3client.upload_file(
-            tmp.name,
-            bucket,
-            f"{s3_base_prefix}/{today_key}/metadata.json"
-        )
-        s3client.upload_file(
-            tmp.name,
-            bucket,
-            f"{s3_base_prefix}/latest/metadata.json"
-        )    
+        s3client.upload_file(tmp.name, bucket, f"{s3_base_prefix}/{today_key}/metadata.json")
+        s3client.upload_file(tmp.name, bucket, f"{s3_base_prefix}/latest/metadata.json")
     logging.info(f"End Training Prophet : {len(trained_groups)} is trained")
 
 
-def check_latest_model_exists(bucket, prefix, conn_name='aws_default', **context) :
+def check_latest_model_exists(bucket, prefix, conn_name="aws_default", **context):
     """
     pkl 파일 존재 확인
 
@@ -251,14 +225,14 @@ def check_latest_model_exists(bucket, prefix, conn_name='aws_default', **context
     conn_name : str
         default = 'aws_default'
         Airflow Connections에 등록된 s3 연결명
-    
+
     Returns
     -------
     boolean
         False이면 downstream task를 skip한다.
     """
-    s3hook   = S3Hook(aws_conn_id=conn_name)
-    s3client = s3hook.get_conn() # boto3 client
+    s3hook = S3Hook(aws_conn_id=conn_name)
+    s3client = s3hook.get_conn()  # boto3 client
 
     response = s3client.list_objects_v2(
         Bucket=bucket,
@@ -269,11 +243,7 @@ def check_latest_model_exists(bucket, prefix, conn_name='aws_default', **context
         logging.info("No objects found in latest model path.")
         return False
 
-    model_files = [
-        obj["Key"]
-        for obj in response["Contents"]
-        if obj["Key"].endswith(".pkl")
-    ]
+    model_files = [obj["Key"] for obj in response["Contents"] if obj["Key"].endswith(".pkl")]
 
     if not model_files:
         logging.info("No model (.pkl) files found in latest.")
@@ -281,6 +251,7 @@ def check_latest_model_exists(bucket, prefix, conn_name='aws_default', **context
 
     logging.info(f"Found {len(model_files)} model files.")
     return True
+
 
 def get_group_values(grp_name):
     """
@@ -299,13 +270,14 @@ def get_group_values(grp_name):
     dict
         그룹명을 구성하던 지역 및 교육구분 정보
     """
-    grp_ele = grp_name.split('__')[1:]
+    grp_ele = grp_name.split("__")[1:]
     # _ -> whitespace 로 변환
     return {
-        'lc_1' : re.sub(r"_", " ", grp_ele[0]), 
-        'lc_2' : re.sub(r"_", " ", grp_ele[1]),
-        'lctr_category' : re.sub(r"_", " ", grp_ele[2]),
+        "lc_1": re.sub(r"_", " ", grp_ele[0]),
+        "lc_2": re.sub(r"_", " ", grp_ele[1]),
+        "lctr_category": re.sub(r"_", " ", grp_ele[2]),
     }
+
 
 @task
 def predict_prophet(bucket, prefix="models/prophet/latest/", conn_name="aws_default", **context):
@@ -315,7 +287,7 @@ def predict_prophet(bucket, prefix="models/prophet/latest/", conn_name="aws_defa
     latest에 저장된 모델을 기준으로 예측을 수행한다.
     dag 실행일 기준으로 예측데이터 시점을 생성하고 예측값을 산출한다.
     yhat이 0이 아닌 ds를 사용하며 룰 기반으로 최종 수강신청 시작일을 계산한다.
-    
+
     Parameters
     ----------
     bucket : str
@@ -342,37 +314,31 @@ def predict_prophet(bucket, prefix="models/prophet/latest/", conn_name="aws_defa
         - 강의 시작일자를 의미하는 ds의 20일 이전 date 계산
         - date가 예측 수행시점보다 미래인 경우만 최종값으로 활용
     """
-    s3hook   = S3Hook(aws_conn_id=conn_name)
-    s3client = s3hook.get_conn() # boto3 client
+    s3hook = S3Hook(aws_conn_id=conn_name)
+    s3client = s3hook.get_conn()  # boto3 client
 
     response = s3client.list_objects_v2(
         Bucket=bucket,
         Prefix=prefix,
     )
 
-    model_keys = [
-        obj["Key"]
-        for obj in response.get("Contents", [])
-        if obj["Key"].endswith(".pkl")
-    ]
+    model_keys = [obj["Key"] for obj in response.get("Contents", []) if obj["Key"].endswith(".pkl")]
 
     if not model_keys:
         raise ValueError("No model files found, but prediction task was triggered.")
 
     predictions = []
-    
-    today = context['ds']
-    future = pd.DataFrame({
-        "ds": pd.date_range(start=today, periods=30, freq="D")
-    })
+
+    today = context["ds"]
+    future = pd.DataFrame({"ds": pd.date_range(start=today, periods=30, freq="D")})
 
     for key in model_keys:
         group_id = key.split("/")[-1].replace(".pkl", "")
         group_values = get_group_values(group_id)
-        
+
         logging.info(f"[@@] Start forecasting... {group_id} ")
         logging.info(f"{group_values}")
-        
+
         # 1) 모델 다운로드
         with tempfile.NamedTemporaryFile() as tmp:
             s3client.download_file(bucket, key, tmp.name)
@@ -380,34 +346,25 @@ def predict_prophet(bucket, prefix="models/prophet/latest/", conn_name="aws_defa
 
         # 2) 예측 수행 & 예측값 전처리
         forecast = model.predict(future)
-        forecast['yhat'] = np.where(
-                forecast['yhat'] < 0.3, 0,
-                np.ceil(forecast['yhat'])
-            )
-        
-        if len(forecast.query("yhat > 0")) != 0 :
+        forecast["yhat"] = np.where(forecast["yhat"] < 0.3, 0, np.ceil(forecast["yhat"]))
+
+        if len(forecast.query("yhat > 0")) != 0:
             # 예측 결과가 0보다 큰 경우만 적재
-            logging.info(forecast.query("yhat > 0")[['ds', 'yhat']].assign(**group_values))
-            
-            predictions.append(
-                forecast.query("yhat > 0")[['ds', 'yhat']]\
-                    .assign(**group_values)
-            )
+            logging.info(forecast.query("yhat > 0")[["ds", "yhat"]].assign(**group_values))
+
+            predictions.append(forecast.query("yhat > 0")[["ds", "yhat"]].assign(**group_values))
     # end for-loop
-    
+
     # 예상 수강 신청일자 계산 : ds - 20일 (데이터상의 중앙값 기준)
     # 예상결과가 오늘 일자보다 미래인 경우만 적재
     all_preds = pd.concat(predictions)
-    all_preds['pred_aply_bgn'] = all_preds["ds"] - pd.Timedelta(days=20)
-    all_preds = (
-        all_preds[all_preds['pred_aply_bgn'] > today]
-        .drop(columns=['ds', 'yhat'])
-    )
-    
-    logging.info(f"Preditions : ")
-    print("\n",all_preds.head())
-    logging.info(f"=================================")
-    
+    all_preds["pred_aply_bgn"] = all_preds["ds"] - pd.Timedelta(days=20)
+    all_preds = all_preds[all_preds["pred_aply_bgn"] > today].drop(columns=["ds", "yhat"])
+
+    logging.info("Preditions : ")
+    print("\n", all_preds.head())
+    logging.info("=================================")
+
     path = f"{Variable.get('DATA_DIR')}/pred_prophet.csv"
     all_preds.to_csv(path, index=False)
     logging.info(f"[@@] Saved CSV File in local : {path}")

@@ -1,4 +1,5 @@
 import time
+
 import requests
 
 
@@ -33,22 +34,17 @@ def fetch_geocding(addr, api_key, max_retry=3):
         API 응답을 JSON으로 파싱하는 과정에서 오류가 발생할 수 있다.
     """
     # 호출시 필요한 변수 및 쿼리
-    url     = "https://dapi.kakao.com/v2/local/search/address.json"
+    url = "https://dapi.kakao.com/v2/local/search/address.json"
     headers = {"Authorization": f"KakaoAK {api_key}"}
-    params  = {"query": addr}
-    
+    params = {"query": addr}
+
     for attempt in range(max_retry):
         try:
-            response = requests.get(
-                url,
-                headers=headers,
-                params=params,
-                timeout=2
-            )
+            response = requests.get(url, headers=headers, params=params, timeout=2)
 
             # HTTP 정상응답 체크
             if response.status_code != 200:
-                print(f"[{addr}] HTTP {response.status_code} (retry {attempt+1})")
+                print(f"[{addr}] HTTP {response.status_code} (retry {attempt + 1})")
                 time.sleep(0.2)
                 continue
 
@@ -61,7 +57,7 @@ def fetch_geocding(addr, api_key, max_retry=3):
             return data
 
         except requests.exceptions.RequestException as e:
-            print(f"[{addr}] Exception: {e} (retry {attempt+1})")
+            print(f"[{addr}] Exception: {e} (retry {attempt + 1})")
             time.sleep(0.2)
             continue
 

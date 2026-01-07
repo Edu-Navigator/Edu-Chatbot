@@ -5,45 +5,43 @@ Digital Learning 크롤링 및 적재 파이프라인 (Airflow TaskFlow).
 데이터 정제 -> PostgreSQL 적재까지의 ETL 파이프라인을 정의한다.
 """
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-import pandas as pd
-import os
+import logging
 import time
-import requests
-from bs4 import BeautifulSoup
+from datetime import datetime
 
+import pandas as pd
+import requests
 from airflow.decorators import task
 from airflow.models import Variable
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-
+from bs4 import BeautifulSoup
+from dateutil.relativedelta import relativedelta
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from utils.webdriver import get_driver
 
-import logging
 logger = logging.getLogger("airflow.task")
 logger.setLevel(logging.INFO)
 
 DIGI_END_COLNAME_MAP = {
-    "교육명" : "LCTR_NM",
-    "url"   : "APLY_URL",
-    "강의유형" : "LCTR_TYPE", # ?
-    "교육방식" : "LCTR_WAY",
-    "과정구분" : "LCTR_CATEGORY",
-    "역량" : "LCTR_ABILITY",
-    "교육기간" : "LCTR_BGN_END",
-    "교육시간" : "LCTR_TIME",
-    "교육일정" : "LCTR_SCHEDULE",
-    "교육내용" : "LCTR_CONTENT",
-    "강사명" : "LCTR_TEACHER",
-    "보조강사/가이드명" : "LCTR_SUB_TEACHER",
-    "담당 배움터" : "DL_CHARGE",
-    "실제 교육장소" : "DL_NM",
-    "group" : "LCTR_STATUS"
+    "교육명": "LCTR_NM",
+    "url": "APLY_URL",
+    "강의유형": "LCTR_TYPE",  # ?
+    "교육방식": "LCTR_WAY",
+    "과정구분": "LCTR_CATEGORY",
+    "역량": "LCTR_ABILITY",
+    "교육기간": "LCTR_BGN_END",
+    "교육시간": "LCTR_TIME",
+    "교육일정": "LCTR_SCHEDULE",
+    "교육내용": "LCTR_CONTENT",
+    "강사명": "LCTR_TEACHER",
+    "보조강사/가이드명": "LCTR_SUB_TEACHER",
+    "담당 배움터": "DL_CHARGE",
+    "실제 교육장소": "DL_NM",
+    "group": "LCTR_STATUS",
 }
+
 
 @task
 def collect_list(**context):
@@ -78,7 +76,7 @@ def collect_list(**context):
         str
             강의 상세 페이지 URL
         """
-        
+
         # 목록 페이지는 JS 렌더링(Selenium 사용)
         return (
             "https://www.xn--2z1bw8k1pjz5ccumkb.kr/edc/crse/oprtn/dtl.do"
@@ -107,22 +105,14 @@ def collect_list(**context):
             for tab in ["a_ing", "a_end"]:
                 pno = 1
                 while True:
-                    url = BASE_URL.format(
-                        tab=tab,
-                        pno=pno,
-                        bgn=begin_date,
-                        end=end_date,
-                        area=area_cd
-                    )
+                    url = BASE_URL.format(tab=tab, pno=pno, bgn=begin_date, end=end_date, area=area_cd)
                     driver.get(url)
 
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".edu_list"))
-                    )
+                    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".edu_list")))
                     time.sleep(1)
 
                     items = driver.find_elements(By.CSS_SELECTOR, "div.edulistel")
-                    if not items: # 마지막 페이지로 간주
+                    if not items:  # 마지막 페이지로 간주
                         break
 
                     for item in items:
@@ -130,21 +120,13 @@ def collect_list(**context):
                         if not edc_id:
                             continue
 
-                        title = item.find_element(
-                            By.CSS_SELECTOR, "a.title span.tit"
-                        ).text.strip()
+                        title = item.find_element(By.CSS_SELECTOR, "a.title span.tit").text.strip()
 
-                        status = item.find_element(
-                            By.CSS_SELECTOR, "span.cateTag"
-                        ).text.strip()
+                        status = item.find_element(By.CSS_SELECTOR, "span.cateTag").text.strip()
 
-                        rows.append({
-                            "교육명": title,
-                            "상태": status,
-                            "url": make_detail_url(edc_id)
-                        })
+                        rows.append({"교육명": title, "상태": status, "url": make_detail_url(edc_id)})
                     pno += 1
-                    if pno % 10 == 0 :
+                    if pno % 10 == 0:
                         logging.info(f"[@@] Extracted : {area_name} .... Page Number {pno}")
     finally:
         driver.quit()
@@ -155,6 +137,7 @@ def collect_list(**context):
     logging.info(f"[@@] Saved CSV File in local : {path}")
     # context["ti"].xcom_push(key="list_path", value=path)
     return path
+
 
 @task
 def collect_detail(input_path, **context):
@@ -176,7 +159,7 @@ def collect_detail(input_path, **context):
     str
         강의 상세 정보 CSV 파일 경로
     """
-    
+
     # 상세 페이지는 정적 HTML; requests + BeautifulSoup 사용
     df_list = pd.read_csv(input_path)
 
@@ -195,8 +178,8 @@ def collect_detail(input_path, **context):
 
         rows.append({**row.to_dict(), **detail})
         time.sleep(0.2)
-    logging.info(f"[@@] End - get details of digital learning ")
-    
+    logging.info("[@@] End - get details of digital learning ")
+
     df = pd.DataFrame(rows)
     path = f"{Variable.get('DATA_DIR')}/detail.csv"
     df.to_csv(path, index=False)
@@ -204,8 +187,9 @@ def collect_detail(input_path, **context):
     # context["ti"].xcom_push(key="detail_path", value=path)
     return path
 
+
 @task
-def transform_data(input_path,**context):
+def transform_data(input_path, **context):
     """
     수집된 데이터를 정제 및 변환한다.
 
@@ -224,24 +208,24 @@ def transform_data(input_path,**context):
     str
         변환 완료된 CSV 파일 경로
     """
-    
+
     df = pd.read_csv(input_path)
 
     def classify(status):
         return "ing" if "모집" in status or "접수" in status else "end"
 
     df["group"] = df["상태"].apply(classify)
-    
-    
+
     # 컬럼명 변경 및 적재할 컬럼만 수집
-    df = df.rename(columns = DIGI_END_COLNAME_MAP)[list(DIGI_END_COLNAME_MAP.values())]
+    df = df.rename(columns=DIGI_END_COLNAME_MAP)[list(DIGI_END_COLNAME_MAP.values())]
     path_end = f"{Variable.get('DATA_DIR')}/digital_end_{context['ds']}.csv"
-    logging.info(f"[@@] End - final CSV file(DIGI_END) saved in local")
-    
+    logging.info("[@@] End - final CSV file(DIGI_END) saved in local")
+
     df.to_csv(path_end, index=False, encoding="utf-8-sig")
     # context["ti"].xcom_push(key="end_path", value=path_end)
     return path_end
-    
+
+
 @task
 def load_data_to_table(input_path, schema, table, conn_name="conn_production", **context):
     """
@@ -267,47 +251,45 @@ def load_data_to_table(input_path, schema, table, conn_name="conn_production", *
     -------
     None
     """
-        
+
     df = pd.read_csv(input_path)
     df = df.where(pd.notnull(df), None)
 
     hook = PostgresHook(postgres_conn_id=conn_name)
     conn, cursor = None, None
-    try :
+    try:
         conn = hook.get_conn()
         cursor = conn.cursor()
-        
+
         cursor.execute("BEGIN")
 
         ## Full refresh
         # DELETE
-        cursor.execute(
-            f"DELETE FROM {schema}.{table}"
-        )
+        cursor.execute(f"DELETE FROM {schema}.{table}")
         deleted_count = cursor.rowcount
         logging.info(f"[삭제 - {schema}.{table}] {deleted_count}개 행")
-        
+
         # INSERT (executemany 사용)
         # PostgreSQL은 컬럼명에 예약어나 특수문자가 있을 수 있으므로 쌍따옴표로 감싸기
         insert_query = f"""
-        INSERT INTO {schema}.{table} ({', '.join(df.columns)})
-        VALUES ({', '.join(['%s'] * len(df.columns))})
+        INSERT INTO {schema}.{table} ({", ".join(df.columns)})
+        VALUES ({", ".join(["%s"] * len(df.columns))})
         """
-        
+
         # DataFrame을 리스트로 변환 (None 값 처리 포함)
         data_to_insert = [tuple(row) for row in df.replace({pd.NA: None, pd.NaT: None}).values]
         cursor.executemany(insert_query, data_to_insert)
         inserted_count = cursor.rowcount
         logging.info(f"[삽입 - {schema}.{table}] {inserted_count}개 행")
-        
+
         conn.commit()
         logging.info(f"[종료] {schema}.{table} : 완료")
-        
+
     except Exception as e:
         logging.error(f"[오류 발생] {schema}.{table} : {type(e).__name__} - {str(e)}")
         if conn:
             conn.rollback()
-            logging.info(f"[롤백 완료]")
+            logging.info("[롤백 완료]")
         raise
     finally:
         if cursor:

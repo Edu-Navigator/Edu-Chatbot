@@ -1,11 +1,11 @@
-from airflow.decorators import task
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.models import Variable
-import pandas as pd
 import logging
+
+import pandas as pd
+from airflow.decorators import task
+from airflow.models import Variable
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from utils.lecture_common_func import *
 from utils.lecture_process_func import *
-
 
 # -----------------------------------------------------------
 # 상수 및 설정
@@ -22,7 +22,7 @@ TABLE_EDU_INFO = "EDU_INFO"
 JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do"
 
 # 원본 데이터 테이블
-TABLE_RAW_SUJI = "RAW_DATA.SUJI_LEARNING" 
+TABLE_RAW_SUJI = "RAW_DATA.SUJI_LEARNING"
 TABLE_RAW_GG = "RAW_DATA.GG_LEARNING"
 # TABLE_RAW_DIGI = "RAW_DATA.DIGITAL_LEARNING_RAW"
 TABLE_RAW_DIGI_END = "RAW_DATA.DIGITAL_LEARNING_END"
@@ -31,6 +31,7 @@ TABLE_RAW_DIGI_END = "RAW_DATA.DIGITAL_LEARNING_END"
 # -----------------------------------------------------------
 # Task 정의
 # -----------------------------------------------------------
+
 
 @task(do_xcom_push=True)
 def suji_data_processing_task():
@@ -60,10 +61,10 @@ def suji_data_processing_task():
     logger.info(f"변환된 컬럼명: {df_raw_suji.columns.tolist()}")
 
     logger.info(f"원본 데이터 (SUJI_LEARNING) {len(df_raw_suji)}건 로드 완료")
-    
+
     if df_raw_suji.empty:
         logger.info("SUJI_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
-        return pd.DataFrame() 
+        return pd.DataFrame()
 
     df_suji = process_suji(df_raw_suji)
 
@@ -96,10 +97,10 @@ def gg_data_processing_task():
     df_raw_gg = hook.get_pandas_df(sql_query)
     df_raw_gg.columns = [c.upper() for c in df_raw_gg.columns]
     logger.info(f"원본 데이터 (GG_LEARNING) {len(df_raw_gg)}건 로드 완료")
-    
+
     if df_raw_gg.empty:
         logger.info("GG_LEARNING 테이블에 데이터가 없어 빈 DataFrame을 반환")
-        return pd.DataFrame() 
+        return pd.DataFrame()
 
     df_gg = process_gg(df_raw_gg)
 
@@ -112,20 +113,20 @@ def gg_data_processing_task():
 
 # @task(do_xcom_push=True)
 # def digi_data_processing_task():
-    # """
-    # RAW_DATA.DIGITAL_LEARNING 테이블의 데이터를 조회하여
-    # 디지털 배움터 수강 중 강좌 데이터 전처리를 수행한다.
+# """
+# RAW_DATA.DIGITAL_LEARNING 테이블의 데이터를 조회하여
+# 디지털 배움터 수강 중 강좌 데이터 전처리를 수행한다.
 
-    # PostgreSQL에서 원본 데이터를 로드한 후 컬럼명을 표준화하고,
-    # `process_digi` 함수를 통해 LECTURE 테이블 스키마에 맞게 변환한다.
-    # 변환 결과는 CSV 파일로 저장되며, 해당 파일 경로를 반환한다.
+# PostgreSQL에서 원본 데이터를 로드한 후 컬럼명을 표준화하고,
+# `process_digi` 함수를 통해 LECTURE 테이블 스키마에 맞게 변환한다.
+# 변환 결과는 CSV 파일로 저장되며, 해당 파일 경로를 반환한다.
 
-    # Returns
-    # -------
-    # str or pandas.DataFrame
-    #     전처리 결과 CSV 파일의 경로.
-    #     원본 데이터가 비어 있는 경우 빈 DataFrame을 반환한다.
-    # """
+# Returns
+# -------
+# str or pandas.DataFrame
+#     전처리 결과 CSV 파일의 경로.
+#     원본 데이터가 비어 있는 경우 빈 DataFrame을 반환한다.
+# """
 
 #     hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
 #     sql_query = f"SELECT * FROM {TABLE_RAW_DIGI}"
@@ -168,7 +169,7 @@ def digi_end_data_processing_task():
     df_raw_digi_end = hook.get_pandas_df(sql_query)
     df_raw_digi_end.columns = [c.upper() for c in df_raw_digi_end.columns]
     logger.info(f"원본 데이터 (DGITAL_LEARNING_END) {len(df_raw_digi_end)}건 로드 완료")
-    
+
     if df_raw_digi_end.empty:
         logger.info("DGITAL_LEARNING_END 테이블에 데이터가 없어 빈 DataFrame을 반환")
         return pd.DataFrame()
@@ -187,7 +188,7 @@ def combine_and_insert_lecture_task(
     suji_path: str,
     gg_path: str,
     # digi_path: str,
-    digi_end_path: str
+    digi_end_path: str,
 ):
     """
     SUJI, GG, DIGITAL_END 전처리 결과를 통합하여
@@ -230,10 +231,13 @@ def combine_and_insert_lecture_task(
     conn, cursor = None, None
 
     # csv 로드 및 데이터 통합
-    
-    paths = [suji_path, gg_path, 
-            # digi_path, 
-            digi_end_path]
+
+    paths = [
+        suji_path,
+        gg_path,
+        # digi_path,
+        digi_end_path,
+    ]
     dfs = []
 
     for path in paths:
@@ -249,13 +253,29 @@ def combine_and_insert_lecture_task(
         return
 
     df_final = pd.concat(dfs, ignore_index=True)
-    
+
     # LECTURE 테이블의 컬럼 순서 (LCTR_ID 제외, AUTOINCREMENT 컬럼)
     ordered_cols = [
-        'APLY_URL', 'LCTR_WAY', 'LCTR_CATEGORY', 'LCTR_NM', 'APLY_WAY', 
-        'APLY_BGN', 'APLY_END', 'LCTR_BGN', 'LCTR_END', 'LCTR_CONTENT', 
-        'PCSP', 'IS_APLY_AVL', 'DL_NM', 'ADDRESS', 'LC_1', 'LC_2', 'LC_3', 
-        'ADDRESS_X', 'ADDRESS_Y', 'LCTR_IMAGE'
+        "APLY_URL",
+        "LCTR_WAY",
+        "LCTR_CATEGORY",
+        "LCTR_NM",
+        "APLY_WAY",
+        "APLY_BGN",
+        "APLY_END",
+        "LCTR_BGN",
+        "LCTR_END",
+        "LCTR_CONTENT",
+        "PCSP",
+        "IS_APLY_AVL",
+        "DL_NM",
+        "ADDRESS",
+        "LC_1",
+        "LC_2",
+        "LC_3",
+        "ADDRESS_X",
+        "ADDRESS_Y",
+        "LCTR_IMAGE",
     ]
 
     # # snowflake에 맞게 날짜 변환, 이후 삭제 또는 변경 필요한지 테스트 필요
@@ -291,14 +311,11 @@ def combine_and_insert_lecture_task(
 
         insert_sql = f"""
             INSERT INTO {SCHEMA_PROCESSED}.{TABLE_LECTURE}
-            ({','.join(cols)})
+            ({",".join(cols)})
             VALUES ({placeholders})
         """
 
-        data = [
-            tuple(row[col] if pd.notnull(row[col]) else None for col in cols)
-            for _, row in df_insert.iterrows()
-        ]
+        data = [tuple(row[col] if pd.notnull(row[col]) else None for col in cols) for _, row in df_insert.iterrows()]
 
         if data:
             cursor.executemany(insert_sql, data)
@@ -367,35 +384,23 @@ def lecture_location_image_task():
     # 주소 기반 지역/좌표 계산
     def resolve_row(row):
         KAKAO_API_KEY = Variable.get("kakao_api_key")
-        
+
         if pd.isna(row["ADDRESS"]) or row["ADDRESS"] is None:
             return pd.Series([None, None, None, None, None])
 
         lc_1, lc_2, lc_3, x, y = resolve_lc_and_coord(row["ADDRESS"], KAKAO_API_KEY)
         return pd.Series([lc_1, lc_2, lc_3, x, y])
 
-    df[["LC_1", "LC_2", "LC_3", "ADDRESS_X", "ADDRESS_Y"]] = df.apply(
-        resolve_row,
-        axis=1
-    )
+    df[["LC_1", "LC_2", "LC_3", "ADDRESS_X", "ADDRESS_Y"]] = df.apply(resolve_row, axis=1)
 
     # 카테고리 -> 이미지 URL 매핑
     # [수정] 외부에서 사용시 한글 jpg가 로드 안되는 현상으로 영문 파일명 mapping 로직 추가
     BASE_IMAGE_URL = "https://team7-batch.s3.ap-northeast-2.amazonaws.com/images/made/"
-    category_map = {
-        "기초 스마트폰": "basic",
-        "스마트폰 활용": "applied",
-        "컴퓨터": "computer",
-        "키오스크": "kiosk"
-    }
+    category_map = {"기초 스마트폰": "basic", "스마트폰 활용": "applied", "컴퓨터": "computer", "키오스크": "kiosk"}
     df["lctr_cate_eng"] = df["LCTR_CATEGORY"].map(category_map)
     mask = df["LCTR_IMAGE"].isna() & df["LCTR_CATEGORY"].notna()
 
-    df.loc[mask, "LCTR_IMAGE"] = (
-        BASE_IMAGE_URL
-        + df.loc[mask, "lctr_cate_eng"].astype(str)
-        + ".jpg"
-    )
+    df.loc[mask, "LCTR_IMAGE"] = BASE_IMAGE_URL + df.loc[mask, "lctr_cate_eng"].astype(str) + ".jpg"
 
     # PROCESSED.LECTURE 테이블에 적재
     conn = hook.get_conn()
@@ -415,14 +420,7 @@ def lecture_location_image_task():
 
     cursor.executemany(
         update_sql,
-        [
-            (
-                r.LC_1, r.LC_2, r.LC_3,
-                r.ADDRESS_X, r.ADDRESS_Y,
-                r.LCTR_IMAGE, r.LCTR_ID
-            )
-            for r in df.itertuples()
-        ]
+        [(r.LC_1, r.LC_2, r.LC_3, r.ADDRESS_X, r.ADDRESS_Y, r.LCTR_IMAGE, r.LCTR_ID) for r in df.itertuples()],
     )
 
     conn.commit()
@@ -472,6 +470,4 @@ def edu_info_task():
         WHERE is_aply_avl = true;
     """
     hook.run(insert_sql, autocommit=True)
-    logger.info(
-        f"[삽입] {SCHEMA_ANALYTICS}.{TABLE_EDU_INFO} 적재 완료 (is_aply_avl = true)"
-    )
+    logger.info(f"[삽입] {SCHEMA_ANALYTICS}.{TABLE_EDU_INFO} 적재 완료 (is_aply_avl = true)")

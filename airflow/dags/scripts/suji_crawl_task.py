@@ -1,13 +1,13 @@
-from airflow.decorators import task
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support import expected_conditions as EC
-from bs4 import BeautifulSoup
 import pandas as pd
+from airflow.decorators import task
 from airflow.models import Variable
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select, WebDriverWait
+
 
 @task
 def suji_crawl_task():
@@ -79,11 +79,7 @@ def suji_crawl_task():
             """
             try:
                 driver.get(link)
-                wait.until(
-                    EC.presence_of_element_located(
-                        (By.CSS_SELECTOR, "div.listRead table tbody")
-                    )
-                )
+                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.listRead table tbody")))
 
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 table = soup.select_one("div.listRead table tbody")
@@ -109,14 +105,9 @@ def suji_crawl_task():
         # 진행중
         soup = BeautifulSoup(driver.page_source, "html.parser")
         if not soup.select_one("td.noData"):
-            wait.until(
-                EC.presence_of_all_elements_located(
-                    (By.CSS_SELECTOR, "tbody tr td.subject a")
-                )
-            )
+            wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tbody tr td.subject a")))
             links_now = [
-                el.get_attribute("href")
-                for el in driver.find_elements(By.CSS_SELECTOR, "tbody tr td.subject a")
+                el.get_attribute("href") for el in driver.find_elements(By.CSS_SELECTOR, "tbody tr td.subject a")
             ]
 
             for link in links_now:
@@ -128,16 +119,9 @@ def suji_crawl_task():
         select_box = Select(driver.find_element(By.ID, "strSearch_part"))
         select_box.select_by_value("end")
 
-        wait.until(
-            EC.presence_of_all_elements_located(
-                (By.CSS_SELECTOR, "tbody tr td.subject a")
-            )
-        )
+        wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "tbody tr td.subject a")))
 
-        links_end = [
-            el.get_attribute("href")
-            for el in driver.find_elements(By.CSS_SELECTOR, "tbody tr td.subject a")
-        ]
+        links_end = [el.get_attribute("href") for el in driver.find_elements(By.CSS_SELECTOR, "tbody tr td.subject a")]
 
         for link in links_end:
             record = parse_detail_page(link)
@@ -180,7 +164,7 @@ def suji_crawl_task():
 
     df = pd.DataFrame(records).rename(columns=mapping)
     df = df.reindex(columns=ordered_cols)
-    
+
     path = f"{Variable.get('DATA_DIR')}/suji_crawl_res.csv"
     df.to_csv(path, index=False)
 
