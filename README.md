@@ -1,16 +1,17 @@
 # Edu-Chatbot
+<br/>
 
-[DAG Documents](https://edu-navigator.github.io/Edu-Chatbot/index.html)
 
 ## 프로젝트 개요
 
-- **주제**
-  디지털 취약 계층을 위한 디지털 교육 정보 통합하여, 상대적으로 접근하기 쉬운 카카오톡 채널을 통해 챗봇 구성
-
-- **목표**
-  1. **정보 접근성 강화:** 취약계층에게 친숙한 '카카오톡'을 통해, 거주지(구/동) 근처의 오프라인 교육 정보와 맞춤형 유튜브 강의 영상을 제공.
-  2. **데이터 통합:** 디지털 배움터, 공공데이터 포털, 유튜브 등 흩어져 있는 교육 콘텐츠를 하나의 파이프라인으로 수집 및 통합.
-  3. **인프라 안정성:** 지속적인 최신 정보 업데이트를 위해 AWS 기반의 안정적인 자동화 파이프라인(Airflow) 구축.
+- **주제**<br/><br/>
+  디지털 취약계층을 위한 디지털 교육 정보를 통합하여, 상대적으로 접근하기 쉬운 카카오톡 채널을 통해 챗봇 구성.
+  <br/><br/>
+- **목표**<br/><br/>
+  **정보 접근성 강화:** 취약계층에게 친숙한 '카카오톡'을 통해, 거주지(구/동) 근처의 오프라인 교육 정보와 맞춤형 유튜브 강의 영상을 제공.<br/>
+  **데이터 통합:** 디지털 배움터, 공공데이터 포털, 유튜브 등 흩어져 있는 교육 콘텐츠를 하나의 파이프라인으로 수집 및 통합.<br/>
+  **인프라 안정성:** 지속적인 최신 정보 업데이트를 위해 AWS 기반의 안정적인 자동화 파이프라인(Airflow) 구축.
+<br/>
 
 ## 디렉토리 구조
 
@@ -41,6 +42,9 @@ Edu-Chatbot/
 └── README.md                       # 프로젝트 설명서
 
 ```
+[DAG Documents](https://edu-navigator.github.io/Edu-Chatbot/index.html)
+<br/><br/>
+
 ## 기술 스택
 
 | 분류 | 기술 상세 | 비고 |
@@ -55,20 +59,23 @@ Edu-Chatbot/
 | **Service** | 카카오 채널 챗봇 | 시나리오 설계 및 사용자 발화 의도 파악 |
 | **Document** | Sphinx | Code 문서화 |
 
-
+<br/>
 
 ## 시스템 아키텍쳐
 
 <img width="1284" height="668" alt="스크린샷 2026-01-05 오후 5 58 31" src="https://github.com/user-attachments/assets/0fca584a-76de-4ac4-9ca1-3a1c32077d23" />
 
+<br/><br/>
 
 ## 데이터 파이프 라인
 <img width="1387" height="566" alt="image" src="https://github.com/user-attachments/assets/79ccf442-5916-4540-a1d9-69ec45f33780" />
 
+<br/><br/>
 
 ## 서비스 운용 (카카오톡 채널)
 <img width="1320" height="669" alt="image (1)" src="https://github.com/user-attachments/assets/da210a04-9557-4146-93e7-ed684bb2add6" />
 
+<br/><br/>
 
 ## CI/CD
 <img width="785" height="436" alt="스크린샷 2026-01-06 오전 10 48 18" src="https://github.com/user-attachments/assets/d8f20a35-bc0d-4fed-849f-092774754c07" />
