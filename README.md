@@ -43,30 +43,30 @@ Edu-Chatbot/
 
 ## 기술 스택
 
-| **분류** | **기술 상세** | **비고** |
-| --- | --- | --- |
+| 분류 | 기술 상세 | 비고 |
+| :--- | :--- | :--- |
 | **Infrastructure** | AWS (VPC, EC2, S3, RDS, Lambda) | Private/Public Subnet 분리, 고가용성 아키텍처 |
 | **Orchestration** | Apache Airflow | Docker Compose 기반, Celery Executor (분산 처리) |
 | **Container** | Docker, Docker Compose | Airflow 및 모니터링 도구 컨테이너화 운영 |
 | **Database** | PostgreSQL (Meta), AWS RDS (Service) | 용도별 DB 분리 (메타데이터/서비스 데이터) |
 | **Monitoring** | Prometheus, Grafana, Node Exporter | 서버 리소스 실시간 시각화 및 장애 감지 |
-| **Data Source** | 크롤링(Selenium, BS4), 공공 데이터 포털, 경기 데이터 드림 | 디지털 배움터, 공공데이터 등 수집 |
+| **Data Source** | 크롤링(Selenium, BS4), 공공 데이터 포털 | 디지털 배움터, 공공데이터 등 수집 |
 | **CI/CD** | GitHub Actions | Main 브랜치 푸시 시 자동 배포 파이프라인 구축 |
 | **Service** | 카카오 채널 챗봇 | 시나리오 설계 및 사용자 발화 의도 파악 |
 | **Document** | Sphinx | Code 문서화 |
 
 ## 시스템 아키텍쳐
+<img width="1284" height="668" alt="스크린샷 2026-01-05 오후 5 58 31" src="https://github.com/user-attachments/assets/0fca584a-76de-4ac4-9ca1-3a1c32077d23" />
 
-![스크린샷 2026-01-05 오후 5.58.31.png](%EC%A0%9C%EB%AA%A9%20%EC%97%86%EC%9D%8C/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2026-01-05_%E1%84%8B%E1%85%A9%E1%84%92%E1%85%AE_5.58.31.png)
 
 ## 데이터 파이프 라인
+<img width="1387" height="566" alt="image" src="https://github.com/user-attachments/assets/79ccf442-5916-4540-a1d9-69ec45f33780" />
 
-![image.png](%EC%A0%9C%EB%AA%A9%20%EC%97%86%EC%9D%8C/image.png)
 
 ## 서비스 운용 (카카오톡 채널)
+<img width="1320" height="669" alt="image (1)" src="https://github.com/user-attachments/assets/da210a04-9557-4146-93e7-ed684bb2add6" />
 
-![image.png](%EC%A0%9C%EB%AA%A9%20%EC%97%86%EC%9D%8C/image%201.png)
 
 ## CI/CD
+<img width="785" height="436" alt="스크린샷 2026-01-06 오전 10 48 18" src="https://github.com/user-attachments/assets/d8f20a35-bc0d-4fed-849f-092774754c07" />
 
-![스크린샷 2026-01-06 오전 10.48.18.png](%EC%A0%9C%EB%AA%A9%20%EC%97%86%EC%9D%8C/%E1%84%89%E1%85%B3%E1%84%8F%E1%85%B3%E1%84%85%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A3%E1%86%BA_2026-01-06_%E1%84%8B%E1%85%A9%E1%84%8C%E1%85%A5%E1%86%AB_10.48.18.png)
