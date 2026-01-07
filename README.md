@@ -1,6 +1,3 @@
-[제목 없음 2e1d82b3d7ed80248592f0911f48e217.md](https://github.com/user-attachments/files/24463054/2e1d82b3d7ed80248592f0911f48e217.md)
-# 제목 없음
-
 # Edu-Chatbot
 
 [DAG Documents](https://edu-navigator.github.io/Edu-Chatbot/index.html)
