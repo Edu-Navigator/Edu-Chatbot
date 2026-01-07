@@ -1,3 +1,4 @@
+```text
 # Edu-Chatbot
 
 [DAG Documents](https://edu-navigator.github.io/Edu-Chatbot/index.html)
